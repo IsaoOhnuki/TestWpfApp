@@ -13,9 +13,8 @@
             <system:Double x:Key="contentRectangleTop">5</system:Double>
             <system:Double x:Key="handleSize">9</system:Double>
             <system:Double x:Key="handleOpacity">0.5</system:Double>
-            <system:Double x:Key="rectangleOpacity">0.5</system:Double>
-            <Thickness x:Key="contentRectangleBorderThickness">1,1,1,1</Thickness>
-            <Thickness x:Key="panelBorderThickness">1,1,1,1</Thickness>
+            <system:Double x:Key="selectedOpacity">0.5</system:Double>
+            <Thickness x:Key="selectedThickness">1,1,1,1</Thickness>
             <Thickness x:Key="contentPanelMargin">-5,-5,-5,-5</Thickness>
             <Thickness x:Key="topLeftHandleMargin">1,1,0,0</Thickness>
             <Thickness x:Key="topRightHandleMargin">0,1,0,0</Thickness>
@@ -24,34 +23,27 @@
             <Visibility x:Key="selecting">visible</Visibility>
             <Visibility x:Key="editing">visible</Visibility>
             <Visibility x:Key="panelBorderVisibility">visible</Visibility>
-            <SolidColorBrush x:Key="panelBrush">#FF8B2E2E</SolidColorBrush>
-            <SolidColorBrush x:Key="panelBorderBrush">#FF25B2B2</SolidColorBrush>
-            <SolidColorBrush x:Key="handleBrush">#FF70EC7B</SolidColorBrush>
-            <SolidColorBrush x:Key="rectangleBrush">#FF000000</SolidColorBrush>
+            <SolidColorBrush x:Key="editBrush">#FF70EC7B</SolidColorBrush>
+            <SolidColorBrush x:Key="selectedBrush">#FF000000</SolidColorBrush>
             <BooleanToVisibilityConverter x:Key="BoolVisibilityConverter"/>
         </ResourceDictionary>
     </UserControl.Resources>
-
-    <Grid Background="{StaticResource panelBrush}">
-        <Border x:Name="contentPanel"
-                BorderBrush="{StaticResource panelBorderBrush}"
-                BorderThickness="{StaticResource panelBorderThickness}"
-                Visibility="{StaticResource panelBorderVisibility}"/>
+    
+    <Grid>
         <Canvas x:Name="contentCanvas"
                 Margin="{StaticResource contentPanelMargin}">
-            <Border x:Name="contentRectangle"
-                    Width="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualWidth}"
+            <Border Width="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualWidth}"
                     Height="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
                     Canvas.Left="{StaticResource contentRectangleLeft}"
                     Canvas.Top="{StaticResource contentRectangleTop}"
-                    BorderThickness="5"
+                    BorderThickness="{StaticResource selectedThickness}"
                     Visibility="{Binding Path=Selected,
                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}},
                                          Converter={StaticResource BoolVisibilityConverter}}"
-                    BorderBrush="{StaticResource rectangleBrush}"
-                    Opacity="1"/>
-            <Border x:Name="topLeftHandle"
-                    Width="{StaticResource handleSize}"
+                    BorderBrush="{Binding Path=SelectedBrush,
+                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}}}"
+                    Opacity="{StaticResource selectedOpacity}"/>
+            <Border Width="{StaticResource handleSize}"
                     Height="{StaticResource handleSize}"
                     Canvas.Left="0"
                     Canvas.Top="0"
@@ -59,10 +51,10 @@
                     Visibility="{Binding Path=Edit,
                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}},
                                          Converter={StaticResource BoolVisibilityConverter}}"
-                    Background="{StaticResource handleBrush}"
+                    Background="{Binding Path=EditBrush,
+                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}}}"
                     Opacity="{StaticResource handleOpacity}"/>
-            <Border x:Name="topRightHandle"
-                    Width="{StaticResource handleSize}"
+            <Border Width="{StaticResource handleSize}"
                     Height="{StaticResource handleSize}"
                     Canvas.Left="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualWidth}"
                     Canvas.Top="0"
@@ -70,10 +62,10 @@
                     Visibility="{Binding Path=Edit,
                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}},
                                          Converter={StaticResource BoolVisibilityConverter}}"
-                    Background="{StaticResource handleBrush}"
+                    Background="{Binding Path=EditBrush,
+                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}}}"
                     Opacity="{StaticResource handleOpacity}"/>
-            <Border x:Name="bottomLeftHandle"
-                    Width="{StaticResource handleSize}"
+            <Border Width="{StaticResource handleSize}"
                     Height="{StaticResource handleSize}"
                     Canvas.Left="0"
                     Canvas.Top="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
@@ -81,10 +73,10 @@
                     Visibility="{Binding Path=Edit,
                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}},
                                          Converter={StaticResource BoolVisibilityConverter}}"
-                    Background="{StaticResource handleBrush}"
+                    Background="{Binding Path=EditBrush,
+                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}}}"
                     Opacity="{StaticResource handleOpacity}"/>
-            <Border x:Name="bottomRightHandle"
-                    Width="{StaticResource handleSize}"
+            <Border Width="{StaticResource handleSize}"
                     Height="{StaticResource handleSize}"
                     Canvas.Left="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualWidth}"
                     Canvas.Top="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=ActualHeight}"
@@ -92,7 +84,8 @@
                     Visibility="{Binding Path=Edit,
                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}},
                                          Converter={StaticResource BoolVisibilityConverter}}"
-                    Background="{StaticResource handleBrush}"
+                    Background="{Binding Path=EditBrush,
+                                          RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsAreaItem}}}"
                     Opacity="{StaticResource handleOpacity}"/>
         </Canvas>
     </Grid>

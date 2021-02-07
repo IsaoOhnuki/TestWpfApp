@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ObjectAreaLibrary
 {
@@ -17,7 +18,37 @@ namespace ObjectAreaLibrary
             ZIndex = 0;
             Selected = (Visibility)Resources["selecting"] == Visibility.Visible;
             Edit = (Visibility)Resources["editing"] == Visibility.Visible;
+            SelectedBrush = (Brush)Resources["selectedBrush"];
+            EditBrush = (Brush)Resources["editBrush"];
         }
+
+        #region SelectedBrushProperty
+        public static readonly DependencyProperty SelectedBrushProperty = DependencyProperty.RegisterAttached(
+            nameof(SelectedBrush),
+            typeof(Brush),
+            typeof(ContentsAreaItem),
+            new FrameworkPropertyMetadata(null));
+
+        public Brush SelectedBrush
+        {
+            get { return (Brush)GetValue(SelectedBrushProperty); }
+            set { SetValue(SelectedBrushProperty, value); }
+        }
+        #endregion
+
+        #region EditBrushProperty
+        public static readonly DependencyProperty EditBrushProperty = DependencyProperty.RegisterAttached(
+            nameof(EditBrush),
+            typeof(Brush),
+            typeof(ContentsAreaItem),
+            new FrameworkPropertyMetadata(null));
+
+        public Brush EditBrush
+        {
+            get { return (Brush)GetValue(EditBrushProperty); }
+            set { SetValue(EditBrushProperty, value); }
+        }
+        #endregion
 
         #region SelectedProperty
         public static readonly DependencyProperty SelectedProperty = DependencyProperty.RegisterAttached(

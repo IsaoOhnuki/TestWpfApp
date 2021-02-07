@@ -24,8 +24,8 @@ namespace TestCoreApp
         {
             InitializeComponent();
 
-            item.Selected = false;
-            item.Edit = false;
+            //item.Selected = false;
+            //item.Edit = false;
             item.Width = 100;
             item.Height = 100;
         }
