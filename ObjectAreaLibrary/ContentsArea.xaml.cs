@@ -24,7 +24,7 @@ namespace ObjectAreaLibrary
         }
 
         #region AreaItemsProperty
-        public void AddAreaItem(ContentsAreaItem areaItem)
+        public void AddAreaItem(ContentsContainer areaItem)
         {
             if (!contentsCanvas.Children.Contains(areaItem))
             {
@@ -32,7 +32,7 @@ namespace ObjectAreaLibrary
             }
         }
 
-        public void RemoveAreaItem(ContentsAreaItem areaItem)
+        public void RemoveAreaItem(ContentsContainer areaItem)
         {
             if (contentsCanvas.Children.Contains(areaItem))
             {

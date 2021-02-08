@@ -8,45 +8,42 @@ namespace ObjectAreaLibrary
     /// <summary>
     /// ContentsAreaItem.xaml の相互作用ロジック
     /// </summary>
-    public partial class ContentsAreaItem : UserControl
+    public partial class ContentsContainer : UserControl
     {
-        public ContentsAreaItem()
+        public ContentsContainer()
         {
             InitializeComponent();
+            Width = 150;
+            Height = 80;
             Left = 0;
             Right = 0;
             ZIndex = 0;
             Selected = (Visibility)Resources["selecting"] == Visibility.Visible;
             Edit = (Visibility)Resources["editing"] == Visibility.Visible;
-            SelectedBrush = (Brush)Resources["selectedBrush"];
-            EditBrush = (Brush)Resources["editBrush"];
+
+            BorderThicknessProperty.OverrideMetadata(
+                typeof(ContentsContainer),
+                new FrameworkPropertyMetadata(
+                    default(Thickness),
+                    (d, e) => {
+                        if (d is ContentsContainer areaItem)
+                        {
+                            Thickness thickness = (Thickness)e.NewValue;
+                            CanvasMargin = new Thickness(-(thickness.Left + 5), -(thickness.Top + 5), -(thickness.Right + 5), -(thickness.Bottom + 5));
+                        }
+                    }));
         }
 
-        #region SelectedBrushProperty
-        public static readonly DependencyProperty SelectedBrushProperty = DependencyProperty.RegisterAttached(
-            nameof(SelectedBrush),
-            typeof(Brush),
-            typeof(ContentsAreaItem),
-            new FrameworkPropertyMetadata(null));
-
-        public Brush SelectedBrush
+        #region CanvasMarginProperty
+        public static readonly DependencyProperty CanvasMarginProperty = DependencyProperty.RegisterAttached(
+            nameof(CanvasMargin),
+            typeof(Thickness),
+            typeof(ContentsContainer),
+            new FrameworkPropertyMetadata(default(Thickness)));
+        public Thickness CanvasMargin
         {
-            get { return (Brush)GetValue(SelectedBrushProperty); }
-            set { SetValue(SelectedBrushProperty, value); }
-        }
-        #endregion
-
-        #region EditBrushProperty
-        public static readonly DependencyProperty EditBrushProperty = DependencyProperty.RegisterAttached(
-            nameof(EditBrush),
-            typeof(Brush),
-            typeof(ContentsAreaItem),
-            new FrameworkPropertyMetadata(null));
-
-        public Brush EditBrush
-        {
-            get { return (Brush)GetValue(EditBrushProperty); }
-            set { SetValue(EditBrushProperty, value); }
+            get { return (Thickness)GetValue(CanvasMarginProperty); }
+            set { SetValue(CanvasMarginProperty, value); }
         }
         #endregion
 
@@ -54,14 +51,13 @@ namespace ObjectAreaLibrary
         public static readonly DependencyProperty SelectedProperty = DependencyProperty.RegisterAttached(
             nameof(Selected),
             typeof(bool),
-            typeof(ContentsAreaItem),
+            typeof(ContentsContainer),
             new FrameworkPropertyMetadata(false, (d, e) => {
-                if (d is ContentsAreaItem areaItem)
+                if (d is ContentsContainer areaItem)
                 {
                     areaItem.OnSelectChanged((bool)e.NewValue);
                 }
             }));
-
         public bool Selected
         {
             get { return (bool)GetValue(SelectedProperty); }
@@ -69,7 +65,6 @@ namespace ObjectAreaLibrary
         }
 
         public event Action<bool> OnSelectChangedEvent;
-
         public void OnSelectChanged(bool value)
         {
             OnSelectChangedEvent?.Invoke(value);
@@ -80,14 +75,13 @@ namespace ObjectAreaLibrary
         public static readonly DependencyProperty EditProperty = DependencyProperty.RegisterAttached(
             nameof(Edit),
             typeof(bool),
-            typeof(ContentsAreaItem),
+            typeof(ContentsContainer),
             new FrameworkPropertyMetadata(false, (d, e) => {
-                if (d is ContentsAreaItem areaItem)
+                if (d is ContentsContainer areaItem)
                 {
                     areaItem.OnEditChanged((bool)e.NewValue);
                 }
             }));
-
         public bool Edit
         {
             get { return (bool)GetValue(EditProperty); }
@@ -95,7 +89,6 @@ namespace ObjectAreaLibrary
         }
 
         public event Action<bool> OnEditChangedEvent;
-
         public void OnEditChanged(bool value)
         {
             OnEditChangedEvent?.Invoke(value);
@@ -114,7 +107,6 @@ namespace ObjectAreaLibrary
         }
 
         public event Action<double> OnLeftChangedEvent;
-
         public void OnLeftChanged(double value)
         {
             OnLeftChangedEvent?.Invoke(value);
@@ -133,7 +125,6 @@ namespace ObjectAreaLibrary
         }
 
         public event Action<double> OnRightChangedEvent;
-
         public void OnRightChanged(double value)
         {
             OnRightChangedEvent?.Invoke(value);
@@ -152,7 +143,6 @@ namespace ObjectAreaLibrary
         }
 
         public event Action<int> OnZIndexChangedEvent;
-
         public void OnZIndexChanged(int value)
         {
             OnZIndexChangedEvent?.Invoke(value);

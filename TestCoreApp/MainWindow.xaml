@@ -10,7 +10,7 @@
     <Grid>
 
         <ObjectAreaLibrary:ContentsArea HorizontalAlignment="Center" VerticalAlignment="Center" Height="185" Width="316" Background="White"/>
-        <ObjectAreaLibrary:ContentsAreaItem x:Name="item" HorizontalAlignment="Left" Margin="342,201,0,0" VerticalAlignment="Top"/>
+        <ObjectAreaLibrary:ContentsContainer x:Name="item" HorizontalAlignment="Left" Margin="342,201,0,0" VerticalAlignment="Top" BorderThickness="5"/>
 
     </Grid>
 </Window>
