@@ -35,7 +35,7 @@
                        Height="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualHeight}"
                        Canvas.Left="{StaticResource contentRectangleLeft}"
                        Canvas.Top="{StaticResource contentRectangleTop}"
-                       Visibility="{Binding Path=Selected,
+                       Visibility="{Binding Path=Select,
                                             RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsContainer}},
                                             Converter={StaticResource BoolVisibilityConverter}}"
                        StrokeDashArray="4 4"
@@ -46,7 +46,7 @@
                        Height="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualHeight}"
                        Canvas.Left="{StaticResource contentRectangleLeft}"
                        Canvas.Top="{StaticResource contentRectangleTop}"
-                       Visibility="{Binding Path=Selected,
+                       Visibility="{Binding Path=Select,
                                             RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsContainer}},
                                             Converter={StaticResource BoolVisibilityConverter}}"
                        StrokeDashOffset="4"

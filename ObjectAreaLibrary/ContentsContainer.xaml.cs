@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 
 namespace ObjectAreaLibrary
 {
@@ -12,14 +11,7 @@ namespace ObjectAreaLibrary
     {
         public ContentsContainer()
         {
-            InitializeComponent();
-
-            Left = 0;
-            Right = 0;
-            ZIndex = 0;
-            Selected = (Visibility)Resources["selecting"] == Visibility.Visible;
-            Edit = (Visibility)Resources["editing"] == Visibility.Visible;
-
+            // InitializeComponent前
             BorderThicknessProperty.OverrideMetadata(
                 typeof(ContentsContainer),
                 new FrameworkPropertyMetadata(default(Thickness), (d, e) => {
@@ -29,14 +21,26 @@ namespace ObjectAreaLibrary
                         CanvasMargin = new Thickness(-(thickness.Left + 5), -(thickness.Top + 5), -(thickness.Right + 5), -(thickness.Bottom + 5));
                     }
                 }));
+
+            InitializeComponent();
+
+            Left = 0;
+            Top = 0;
+            ZIndex = 0;
+            Select = (Visibility)Resources["selecting"] == Visibility.Visible;
+            Edit = (Visibility)Resources["editing"] == Visibility.Visible;
         }
 
         #region CanvasMarginProperty
+        /// <summary>
+        /// UserControlのBorderThicknessが変化するとDockSizeが変化するためそれを補正する
+        /// </summary>
         public static readonly DependencyProperty CanvasMarginProperty = DependencyProperty.RegisterAttached(
             nameof(CanvasMargin),
             typeof(Thickness),
             typeof(ContentsContainer),
             new FrameworkPropertyMetadata(default(Thickness)));
+
         public Thickness CanvasMargin
         {
             get { return (Thickness)GetValue(CanvasMarginProperty); }
@@ -44,9 +48,34 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region SelectedProperty
-        public static readonly DependencyProperty SelectedProperty = DependencyProperty.RegisterAttached(
-            nameof(Selected),
+        #region GroupProperty
+        public static readonly DependencyProperty GroupProperty = DependencyProperty.RegisterAttached(
+            nameof(Group),
+            typeof(string),
+            typeof(ContentsContainer),
+            new FrameworkPropertyMetadata(default(string), (d, e) => {
+                if (d is ContentsContainer areaItem)
+                {
+                    areaItem.OnGroupChanged(areaItem, (string)e.NewValue);
+                }
+            }));
+
+        public string Group
+        {
+            get { return (string)GetValue(GroupProperty); }
+            set { SetValue(GroupProperty, value); }
+        }
+
+        public event Action<ContentsContainer, string> GroupChangedEvent;
+        public void OnGroupChanged(ContentsContainer areaItem, string value)
+        {
+            GroupChangedEvent?.Invoke(areaItem, value);
+        }
+        #endregion
+
+        #region SelectProperty
+        public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
+            nameof(Select),
             typeof(bool),
             typeof(ContentsContainer),
             new FrameworkPropertyMetadata(false, (d, e) => {
@@ -55,16 +84,17 @@ namespace ObjectAreaLibrary
                     areaItem.OnSelectChanged(areaItem, (bool)e.NewValue);
                 }
             }));
-        public bool Selected
+
+        public bool Select
         {
-            get { return (bool)GetValue(SelectedProperty); }
-            set { SetValue(SelectedProperty, value); }
+            get { return (bool)GetValue(SelectProperty); }
+            set { SetValue(SelectProperty, value); }
         }
 
-        public event Action<ContentsContainer, bool> OnSelectChangedEvent;
+        public event Action<ContentsContainer, bool> SelectChangedEvent;
         public void OnSelectChanged(ContentsContainer areaItem, bool value)
         {
-            OnSelectChangedEvent?.Invoke(areaItem, value);
+            SelectChangedEvent?.Invoke(areaItem, value);
         }
         #endregion
 
@@ -110,21 +140,21 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region RightProperty
-        public double Right
+        #region TopProperty
+        public double Top
         {
-            get { return Canvas.GetRight(this); }
+            get { return Canvas.GetTop(this); }
             set
             {
-                Canvas.SetRight(this, value);
-                OnRightChanged(value);
+                Canvas.SetTop(this, value);
+                OnTopChanged(value);
             }
         }
 
-        public event Action<double> OnRightChangedEvent;
-        public void OnRightChanged(double value)
+        public event Action<double> OnTopChangedEvent;
+        public void OnTopChanged(double value)
         {
-            OnRightChangedEvent?.Invoke(value);
+            OnTopChangedEvent?.Invoke(value);
         }
         #endregion
 
