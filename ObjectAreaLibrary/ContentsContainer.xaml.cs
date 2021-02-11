@@ -13,8 +13,7 @@ namespace ObjectAreaLibrary
         public ContentsContainer()
         {
             InitializeComponent();
-            Width = 150;
-            Height = 80;
+
             Left = 0;
             Right = 0;
             ZIndex = 0;
@@ -23,15 +22,13 @@ namespace ObjectAreaLibrary
 
             BorderThicknessProperty.OverrideMetadata(
                 typeof(ContentsContainer),
-                new FrameworkPropertyMetadata(
-                    default(Thickness),
-                    (d, e) => {
-                        if (d is ContentsContainer areaItem)
-                        {
-                            Thickness thickness = (Thickness)e.NewValue;
-                            CanvasMargin = new Thickness(-(thickness.Left + 5), -(thickness.Top + 5), -(thickness.Right + 5), -(thickness.Bottom + 5));
-                        }
-                    }));
+                new FrameworkPropertyMetadata(default(Thickness), (d, e) => {
+                    if (d is ContentsContainer areaItem)
+                    {
+                        Thickness thickness = (Thickness)e.NewValue;
+                        CanvasMargin = new Thickness(-(thickness.Left + 5), -(thickness.Top + 5), -(thickness.Right + 5), -(thickness.Bottom + 5));
+                    }
+                }));
         }
 
         #region CanvasMarginProperty
@@ -55,7 +52,7 @@ namespace ObjectAreaLibrary
             new FrameworkPropertyMetadata(false, (d, e) => {
                 if (d is ContentsContainer areaItem)
                 {
-                    areaItem.OnSelectChanged((bool)e.NewValue);
+                    areaItem.OnSelectChanged(areaItem, (bool)e.NewValue);
                 }
             }));
         public bool Selected
@@ -64,10 +61,10 @@ namespace ObjectAreaLibrary
             set { SetValue(SelectedProperty, value); }
         }
 
-        public event Action<bool> OnSelectChangedEvent;
-        public void OnSelectChanged(bool value)
+        public event Action<ContentsContainer, bool> OnSelectChangedEvent;
+        public void OnSelectChanged(ContentsContainer areaItem, bool value)
         {
-            OnSelectChangedEvent?.Invoke(value);
+            OnSelectChangedEvent?.Invoke(areaItem, value);
         }
         #endregion
 
@@ -79,7 +76,7 @@ namespace ObjectAreaLibrary
             new FrameworkPropertyMetadata(false, (d, e) => {
                 if (d is ContentsContainer areaItem)
                 {
-                    areaItem.OnEditChanged((bool)e.NewValue);
+                    areaItem.OnEditChanged(areaItem, (bool)e.NewValue);
                 }
             }));
         public bool Edit
@@ -88,10 +85,10 @@ namespace ObjectAreaLibrary
             set { SetValue(EditProperty, value); }
         }
 
-        public event Action<bool> OnEditChangedEvent;
-        public void OnEditChanged(bool value)
+        public event Action<ContentsContainer, bool> OnEditChangedEvent;
+        public void OnEditChanged(ContentsContainer areaItem, bool value)
         {
-            OnEditChangedEvent?.Invoke(value);
+            OnEditChangedEvent?.Invoke(areaItem, value);
         }
         #endregion
 

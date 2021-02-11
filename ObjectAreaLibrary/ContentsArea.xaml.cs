@@ -24,10 +24,13 @@ namespace ObjectAreaLibrary
         }
 
         #region AreaItemsProperty
+        private List<ContentsContainer> _selected = new List<ContentsContainer>();
+
         public void AddAreaItem(ContentsContainer areaItem)
         {
             if (!contentsCanvas.Children.Contains(areaItem))
             {
+                areaItem.OnSelectChangedEvent += ItemSelected;
                 contentsCanvas.Children.Add(areaItem);
             }
         }
@@ -36,7 +39,20 @@ namespace ObjectAreaLibrary
         {
             if (contentsCanvas.Children.Contains(areaItem))
             {
+                areaItem.OnSelectChangedEvent -= ItemSelected;
                 contentsCanvas.Children.Remove(areaItem);
+            }
+        }
+
+        private void ItemSelected(ContentsContainer areaItem, bool value)
+        {
+            if (value)
+            {
+                _selected.Add(areaItem);
+            }
+            else
+            {
+                _selected.Remove(areaItem);
             }
         }
         #endregion
