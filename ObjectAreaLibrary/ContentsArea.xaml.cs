@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace ObjectAreaLibrary
 {
@@ -134,6 +135,74 @@ namespace ObjectAreaLibrary
             else
             {
                 areaItem.Select = value;
+            }
+        }
+
+        ContentsContainer _editItem;
+        public HandleType HitHandle(Point location)
+        {
+            foreach (var child in contentsCanvas.Children)
+            {
+                if (child is ContentsContainer areaItem && areaItem.Edit)
+                {
+                    _editItem = areaItem;
+                    return areaItem.HitHandle(location);
+                }
+            }
+            _editItem = null;
+            return HandleType.None;
+        }
+        #endregion
+
+        #region ItemResize
+        Point? _downPos = null;
+
+        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var location = e.GetPosition(sender as IInputElement);
+            _downPos = location;
+            _editItem?.Resizing(_handleType, location);
+        }
+
+        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _downPos = null;
+        }
+
+        HandleType _handleType;
+        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            var location = e.GetPosition(sender as IInputElement);
+            if (!_downPos.HasValue)
+            {
+                _handleType = HitHandle(location);
+                switch (_handleType)
+                {
+                    case HandleType.None:
+                        Mouse.OverrideCursor = null;
+                        break;
+                    case HandleType.TopLeft:
+                        Mouse.OverrideCursor = Cursors.SizeNWSE;
+                        break;
+                    case HandleType.TopRight:
+                        Mouse.OverrideCursor = Cursors.SizeNESW;
+                        break;
+                    case HandleType.BottomLeft:
+                        Mouse.OverrideCursor = Cursors.SizeNESW;
+                        break;
+                    case HandleType.BottomRight:
+                        Mouse.OverrideCursor = Cursors.SizeNWSE;
+                        break;
+                }
+            }
+            else
+            {
+                e.GetPosition(sender as IInputElement);
+                if (_editItem != null && _downPos != location)
+                {
+                    _downPos = location;
+                    _editItem.Resize(_handleType, location);
+                }
             }
         }
         #endregion

@@ -23,6 +23,8 @@ namespace TestCoreApp
         public MainWindow()
         {
             InitializeComponent();
+
+            area.AddAreaItem(new ObjectAreaLibrary.ContentsContainer());
         }
     }
 }
