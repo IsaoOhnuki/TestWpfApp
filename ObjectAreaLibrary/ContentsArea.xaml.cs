@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,6 +9,16 @@ namespace ObjectAreaLibrary
 {
     using AreaItems = List<ContentsContainer>;
     using AreaItemsContainer = Dictionary<string, List<ContentsContainer>>;
+
+    public interface IAreaItem
+    {
+        ContentsArea ParentArea { get; }
+        string Group { get; set; }
+        bool Select { get; set; }
+        bool Edit { get; set; }
+        event Action<ContentsContainer, bool> SelectChangedEvent;
+        event Action<ContentsContainer, string> GroupChangedEvent;
+    }
 
     /// <summary>
     /// ContentsArea.xaml の相互作用ロジック
@@ -21,6 +32,117 @@ namespace ObjectAreaLibrary
             Selected = new AreaItems();
             ItemGroup = new AreaItemsContainer();
         }
+
+        #region AreaItemFunction
+        public static ContentsArea GetItemParentArea(object areaItem)
+        {
+            return (areaItem as FrameworkElement)?.Parent as ContentsArea;
+        }
+
+        public static string GetItemGroup(object areaItem)
+        {
+            return (string)(areaItem as DependencyObject)?.GetValue(GroupProperty);
+        }
+
+        public static void SetItemGroup(object areaItem, string value)
+        {
+            (areaItem as DependencyObject)?.SetValue(GroupProperty, value);
+        }
+
+        public static bool GetItemSelect(object areaItem)
+        {
+            return (bool)(areaItem as DependencyObject)?.GetValue(SelectProperty);
+        }
+
+        public static void SetItemSelect(object areaItem, bool value)
+        {
+            (areaItem as DependencyObject)?.SetValue(SelectProperty, value);
+        }
+
+        public static bool GetItemEdit(object areaItem)
+        {
+            return (bool)(areaItem as DependencyObject)?.GetValue(EditProperty);
+        }
+
+        public static void SetItemEdit(object areaItem, bool value)
+        {
+            (areaItem as DependencyObject)?.SetValue(EditProperty, value);
+        }
+        #endregion
+
+        #region GroupProperty
+        public static readonly DependencyProperty GroupProperty = DependencyProperty.RegisterAttached(
+            nameof(Group),
+            typeof(string),
+            typeof(ContentsContainer),
+            new FrameworkPropertyMetadata(default(string), (d, e) => {
+                if (d is IAreaItem areaItem)
+                {
+                    areaItem.ParentArea?.OnGroupChanged(areaItem, (string)e.NewValue);
+                }
+            }));
+
+        public string Group
+        {
+            get { return (string)GetValue(GroupProperty); }
+            set { SetValue(GroupProperty, value); }
+        }
+
+        public event Action<IAreaItem, string> GroupChangedEvent;
+        public void OnGroupChanged(IAreaItem areaItem, string value)
+        {
+            GroupChangedEvent?.Invoke(areaItem, value);
+        }
+        #endregion
+
+        #region SelectProperty
+        public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
+            nameof(Select),
+            typeof(bool),
+            typeof(ContentsContainer),
+            new FrameworkPropertyMetadata(false, (d, e) => {
+                if (d is IAreaItem areaItem)
+                {
+                    areaItem.ParentArea?.OnSelectChanged(areaItem, (bool)e.NewValue);
+                }
+            }));
+
+        public bool Select
+        {
+            get { return (bool)GetValue(SelectProperty); }
+            set { SetValue(SelectProperty, value); }
+        }
+
+        public event Action<IAreaItem, bool> SelectChangedEvent;
+        public void OnSelectChanged(IAreaItem areaItem, bool value)
+        {
+            SelectChangedEvent?.Invoke(areaItem, value);
+        }
+        #endregion
+
+        #region EditProperty
+        public static readonly DependencyProperty EditProperty = DependencyProperty.RegisterAttached(
+            nameof(Edit),
+            typeof(bool),
+            typeof(ContentsContainer),
+            new FrameworkPropertyMetadata(false, (d, e) => {
+                if (d is IAreaItem areaItem)
+                {
+                    areaItem.ParentArea?.OnEditChanged(areaItem, (bool)e.NewValue);
+                }
+            }));
+        public bool Edit
+        {
+            get { return (bool)GetValue(EditProperty); }
+            set { SetValue(EditProperty, value); }
+        }
+
+        public event Action<IAreaItem, bool> EditChangedEvent;
+        public void OnEditChanged(IAreaItem areaItem, bool value)
+        {
+            EditChangedEvent?.Invoke(areaItem, value);
+        }
+        #endregion
 
         #region ItemGroupProperty
         private static readonly DependencyPropertyKey ItemGroupPropertyKey = DependencyProperty.RegisterReadOnly(
@@ -83,7 +205,7 @@ namespace ObjectAreaLibrary
 
         public void ClearSelected()
         {
-            foreach (var item in Selected.OfType<ContentsContainer>().Reverse())
+            foreach (var item in Selected.OfType<IAreaItem>().Reverse())
             {
                 item.Edit = false;
                 item.Select = false;
@@ -92,9 +214,9 @@ namespace ObjectAreaLibrary
         #endregion
 
         #region AreaItemsProperty
-        public void AddAreaItem(ContentsContainer areaItem)
+        public void AddAreaItem(IAreaItem areaItem)
         {
-            if (!contentsCanvas.Children.Contains(areaItem))
+            if (!contentsCanvas.Children.Contains(areaItem as FrameworkElement))
             {
                 areaItem.SelectChangedEvent += ItemSelected;
                 areaItem.GroupChangedEvent += ItemGrouped;

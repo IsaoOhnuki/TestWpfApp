@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:ObjectAreaLibrary"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
-             Height="80" Width="150" BorderBrush="Black" BorderThickness="1,1,1,1">
+             d:DesignHeight="80" d:DesignWidth="150">
     <UserControl.Resources>
         <ResourceDictionary>
             <system:Double x:Key="contentRectangleDiff">5</system:Double>
@@ -14,6 +14,7 @@
             <system:Double x:Key="handleOpacity">1</system:Double>
             <system:Double x:Key="selectedOpacity">1</system:Double>
             <system:Double x:Key="selectedThickness">1</system:Double>
+            <Thickness x:Key="contentRectangleMargin">-5,-5,-5,-5</Thickness>
             <Thickness x:Key="topLeftHandleMargin">1,1,0,0</Thickness>
             <Thickness x:Key="topRightHandleMargin">0,1,0,0</Thickness>
             <Thickness x:Key="bottomLeftHandleMargin">1,0,0,0</Thickness>
@@ -25,10 +26,7 @@
     </UserControl.Resources>
     
     <Grid x:Name="containerFill">
-        <Grid x:Name="cntentsContainer"/>
-        <!-- containerFillの子なのでUserControlのBorderThicknessでDockSizeが変化するためMarginで補正する(UserControlからHandleがはみ出る分大きくとっている) -->
-        <Canvas Margin="{Binding Path=CanvasMargin,
-                                 RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsContainer}}}">
+        <Canvas Margin="{StaticResource contentRectangleMargin}">
             <Rectangle Width="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualWidth}"
                        Height="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualHeight}"
                        Canvas.Left="{StaticResource contentRectangleDiff}"

@@ -19,147 +19,20 @@ namespace ObjectAreaLibrary
     /// </summary>
     public partial class ContentsContainer : UserControl
     {
-        static ContentsContainer()
-        {
-            BorderThicknessProperty.OverrideMetadata(
-                typeof(ContentsContainer),
-                new FrameworkPropertyMetadata(default(Thickness), (d, e) => {
-                    if (d is ContentsContainer areaItem)
-                    {
-                        SetCanvasMarginFromParentThickness(areaItem, (Thickness)e.NewValue);
-                    }
-                }));
-        }
-
         public ContentsContainer()
         {
             InitializeComponent();
-
-            SetCanvasMarginFromParentThickness(this, BorderThickness);
-            Left = 0;
-            Top = 0;
-            ZIndex = 0;
         }
 
-        #region CanvasMarginProperty
-        /// <summary>
-        /// UserControlのBorderThicknessが変化するとDockSizeが変化するためそれを補正する
-        /// </summary>
-        public static readonly DependencyProperty CanvasMarginProperty = DependencyProperty.RegisterAttached(
-            nameof(CanvasMargin),
-            typeof(Thickness),
-            typeof(ContentsContainer),
-            new FrameworkPropertyMetadata(default(Thickness)));
+        public bool Edit { get; set; }
 
-        public Thickness CanvasMargin
-        {   get { return (Thickness)GetValue(CanvasMarginProperty); }
-            set { SetValue(CanvasMarginProperty, value); }
-        }
-
-        private static readonly double _contentRectangleDiff = 5;
-        private static readonly double _handleSize = 9;
-
-        private static void SetCanvasMarginFromParentThickness(ContentsContainer areaItem, Thickness thickness)
-        {
-            areaItem.CanvasMargin = new Thickness()
-            {
-                Left = -(thickness.Left + _contentRectangleDiff),
-                Top = -(thickness.Top + _contentRectangleDiff),
-                Right = -(thickness.Right + _contentRectangleDiff),
-                Bottom = -(thickness.Bottom + _contentRectangleDiff),
-            };
-        }
-        #endregion
-
-        #region GroupProperty
-        public static readonly DependencyProperty GroupProperty = DependencyProperty.RegisterAttached(
-            nameof(Group),
-            typeof(string),
-            typeof(ContentsContainer),
-            new FrameworkPropertyMetadata(default(string), (d, e) => {
-                if (d is ContentsContainer areaItem)
-                {
-                    areaItem.OnGroupChanged(areaItem, (string)e.NewValue);
-                }
-            }));
-
-        public string Group
-        {
-            get { return (string)GetValue(GroupProperty); }
-            set { SetValue(GroupProperty, value); }
-        }
-
-        public event Action<ContentsContainer, string> GroupChangedEvent;
-        public void OnGroupChanged(ContentsContainer areaItem, string value)
-        {
-            GroupChangedEvent?.Invoke(areaItem, value);
-        }
-        #endregion
-
-        #region SelectProperty
-        public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
-            nameof(Select),
-            typeof(bool),
-            typeof(ContentsContainer),
-            new FrameworkPropertyMetadata(false, (d, e) => {
-                if (d is ContentsContainer areaItem)
-                {
-                    areaItem.OnSelectChanged(areaItem, (bool)e.NewValue);
-                }
-            }));
-
-        public bool Select
-        {
-            get { return (bool)GetValue(SelectProperty); }
-            set { SetValue(SelectProperty, value); }
-        }
-
-        public event Action<ContentsContainer, bool> SelectChangedEvent;
-        public void OnSelectChanged(ContentsContainer areaItem, bool value)
-        {
-            SelectChangedEvent?.Invoke(areaItem, value);
-        }
-        #endregion
-
-        #region EditProperty
-        public static readonly DependencyProperty EditProperty = DependencyProperty.RegisterAttached(
-            nameof(Edit),
-            typeof(bool),
-            typeof(ContentsContainer),
-            new FrameworkPropertyMetadata(false, (d, e) => {
-                if (d is ContentsContainer areaItem)
-                {
-                    areaItem.OnEditChanged(areaItem, (bool)e.NewValue);
-                }
-            }));
-        public bool Edit
-        {
-            get { return (bool)GetValue(EditProperty); }
-            set { SetValue(EditProperty, value); }
-        }
-
-        public event Action<ContentsContainer, bool> OnEditChangedEvent;
-        public void OnEditChanged(ContentsContainer areaItem, bool value)
-        {
-            OnEditChangedEvent?.Invoke(areaItem, value);
-        }
-        #endregion
+        public bool Select { get; set; }
 
         #region LeftProperty
         public double Left
         {
             get { return Canvas.GetLeft(this); }
-            set
-            {
-                Canvas.SetLeft(this, value);
-                OnLeftChanged(value);
-            }
-        }
-
-        public event Action<double> OnLeftChangedEvent;
-        public void OnLeftChanged(double value)
-        {
-            OnLeftChangedEvent?.Invoke(value);
+            set { Canvas.SetLeft(this, value); }
         }
         #endregion
 
@@ -167,17 +40,7 @@ namespace ObjectAreaLibrary
         public double Top
         {
             get { return Canvas.GetTop(this); }
-            set
-            {
-                Canvas.SetTop(this, value);
-                OnTopChanged(value);
-            }
-        }
-
-        public event Action<double> OnTopChangedEvent;
-        public void OnTopChanged(double value)
-        {
-            OnTopChangedEvent?.Invoke(value);
+            set { Canvas.SetTop(this, value); }
         }
         #endregion
 
@@ -185,17 +48,7 @@ namespace ObjectAreaLibrary
         public int ZIndex
         {
             get { return Canvas.GetZIndex(this); }
-            set
-            {
-                Canvas.SetZIndex(this, value);
-                OnZIndexChanged(value);
-            }
-        }
-
-        public event Action<int> OnZIndexChangedEvent;
-        public void OnZIndexChanged(int value)
-        {
-            OnZIndexChangedEvent?.Invoke(value);
+            set { Canvas.SetZIndex(this, value); }
         }
         #endregion
 
@@ -339,10 +192,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - _contentRectangleDiff,
-                Y = Top - _contentRectangleDiff,
-                Width = _handleSize,
-                Height = _handleSize,
+                X = Left - ((Thickness)Resources["topLeftHandleMargin"]).Left,
+                Y = Top - ((Thickness)Resources["topLeftHandleMargin"]).Top,
+                Width = (double)Resources["handleSize"],
+                Height = (double)Resources["handleSize"],
             };
             return handleRect.Contains(parentLocation);
         }
@@ -351,10 +204,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - _contentRectangleDiff,
-                Y = Top - _contentRectangleDiff,
-                Width = _handleSize,
-                Height = _handleSize,
+                X = Left + ActualWidth - ((Thickness)Resources["topRightHandleMargin"]).Left,
+                Y = Top - ((Thickness)Resources["topRightHandleMargin"]).Top,
+                Width = (double)Resources["handleSize"],
+                Height = (double)Resources["handleSize"],
             };
             return handleRect.Contains(parentLocation);
         }
@@ -363,10 +216,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - _contentRectangleDiff,
-                Y = Top + ActualHeight - _contentRectangleDiff,
-                Width = _handleSize,
-                Height = _handleSize,
+                X = Left - ((Thickness)Resources["bottomLeftHandleMargin"]).Left,
+                Y = Top + ActualHeight - ((Thickness)Resources["bottomLeftHandleMargin"]).Top,
+                Width = (double)Resources["handleSize"],
+                Height = (double)Resources["handleSize"],
             };
             return handleRect.Contains(parentLocation);
         }
@@ -375,10 +228,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - _contentRectangleDiff,
-                Y = Top + ActualHeight - _contentRectangleDiff,
-                Width = _handleSize,
-                Height = _handleSize,
+                X = Left + ActualWidth - ((Thickness)Resources["bottomRightHandleMargin"]).Left,
+                Y = Top + ActualHeight - ((Thickness)Resources["bottomRightHandleMargin"]).Top,
+                Width = (double)Resources["handleSize"],
+                Height = (double)Resources["handleSize"],
             };
             return handleRect.Contains(parentLocation);
         }
