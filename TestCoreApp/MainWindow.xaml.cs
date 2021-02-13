@@ -24,7 +24,13 @@ namespace TestCoreApp
         {
             InitializeComponent();
 
-            area.AddAreaItem(new ObjectAreaLibrary.ContentsContainer());
+            area.AddAreaItem(new ObjectAreaLibrary.ContentsContainer() {
+                Background = new SolidColorBrush(Colors.Red),
+            });
+            area.AddAreaItem(new ObjectAreaLibrary.ContentsContainer()
+            {
+                Background = new SolidColorBrush(Colors.Blue),
+            });
         }
     }
 }

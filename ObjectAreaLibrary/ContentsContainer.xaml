@@ -24,8 +24,9 @@
         </ResourceDictionary>
     </UserControl.Resources>
     
-    <Grid>
+    <Grid x:Name="containerFill">
         <Grid x:Name="cntentsContainer"/>
+        <!-- containerFillの子なのでUserControlのBorderThicknessでDockSizeが変化するためMarginで補正する(UserControlからHandleがはみ出る分大きくとっている) -->
         <Canvas Margin="{Binding Path=CanvasMargin,
                                  RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ContentsContainer}}}">
             <Rectangle Width="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualWidth}"

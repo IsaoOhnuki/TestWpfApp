@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -72,7 +73,7 @@ namespace ObjectAreaLibrary
         {
             if (value)
             {
-                Selected.Add(areaItem);
+                Selected.Insert(0, areaItem);
             }
             else
             {
@@ -142,7 +143,7 @@ namespace ObjectAreaLibrary
 
         public ContentsContainer FindItem(Point location)
         {
-            foreach (var child in contentsCanvas.Children)
+            foreach (var child in contentsCanvas.Children.OfType<UIElement>().Reverse())
             {
                 if (child is ContentsContainer areaItem)
                 {
@@ -166,6 +167,7 @@ namespace ObjectAreaLibrary
             if (_editItem != null)
             {
                 _downPos = location;
+                _handleType = HandleType.Fill;
                 ItemSelect(_editItem, true);
                 _editItem?.Resizing(_handleType, location);
             }
