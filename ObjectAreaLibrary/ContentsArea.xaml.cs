@@ -73,11 +73,20 @@ namespace ObjectAreaLibrary
         {
             if (value)
             {
-                Selected.Insert(0, areaItem);
+                Selected.Add(areaItem);
             }
             else
             {
                 Selected.Remove(areaItem);
+            }
+        }
+
+        public void ClearSelected()
+        {
+            foreach (var item in Selected.OfType<ContentsContainer>().Reverse())
+            {
+                item.Edit = false;
+                item.Select = false;
             }
         }
         #endregion
@@ -160,45 +169,6 @@ namespace ObjectAreaLibrary
 
         #region ItemResize
         Point? _downPos = null;
-
-        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            var location = e.GetPosition(sender as IInputElement);
-            if (_editItem != null)
-            {
-                _downPos = location;
-                _handleType = HandleType.Fill;
-                ItemSelect(_editItem, true);
-                _editItem?.Resizing(_handleType, location);
-            }
-            else
-            {
-                var areaItem = FindItem(location);
-                if (areaItem != null)
-                {
-                    if (!areaItem.Select)
-                    {
-                        _downPos = location;
-                        ItemSelect(_editItem, true);
-                        _editItem.Resizing(_handleType, location);
-                    }
-                }
-                else
-                {
-                    var selected = new AreaItems(Selected);
-                    foreach (var item in selected)
-                    {
-                        ItemSelect(item, false);
-                    }
-                }
-            }
-        }
-
-        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            _downPos = null;
-        }
-
         HandleType _handleType;
         ContentsContainer _editItem;
 
@@ -207,11 +177,11 @@ namespace ObjectAreaLibrary
             var location = e.GetPosition(sender as IInputElement);
             if (!_downPos.HasValue)
             {
-                _editItem = FindItem(location);
                 _handleType = HandleType.None;
-                if (_editItem != null)
+                ContentsContainer areaItem = FindItem(location);
+                if (areaItem != null)
                 {
-                    _handleType = _editItem.HitHandle(location);
+                    _handleType = areaItem.HitHandle(location);
                 }
                 switch (_handleType)
                 {
@@ -243,6 +213,36 @@ namespace ObjectAreaLibrary
                     _editItem.Resize(_handleType, location);
                 }
             }
+        }
+
+        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var location = e.GetPosition(sender as IInputElement);
+            if (_handleType == HandleType.None)
+            {
+                ClearSelected();
+                _editItem = FindItem(location);
+                if (_editItem != null)
+                {
+                    _downPos = location;
+                    _handleType = HandleType.Fill;
+                    ItemSelect(_editItem, true);
+                    _editItem.Resizing(_handleType, location);
+                }
+            }
+            else
+            {
+                if (_editItem != null)
+                {
+                    _downPos = location;
+                    _editItem.Resizing(_handleType, location);
+                }
+            }
+        }
+
+        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            _downPos = null;
         }
         #endregion
     }
