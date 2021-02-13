@@ -6,20 +6,18 @@
              xmlns:local="clr-namespace:ObjectAreaLibrary"
              xmlns:system="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
-             Height="80" Width="150">
+             Height="80" Width="150" BorderBrush="Black" BorderThickness="1,1,1,1">
     <UserControl.Resources>
         <ResourceDictionary>
             <system:Double x:Key="contentRectangleDiff">5</system:Double>
             <system:Double x:Key="handleSize">9</system:Double>
             <system:Double x:Key="handleOpacity">1</system:Double>
-            <system:Double x:Key="selectedOpacity">0.5</system:Double>
+            <system:Double x:Key="selectedOpacity">1</system:Double>
             <system:Double x:Key="selectedThickness">1</system:Double>
             <Thickness x:Key="topLeftHandleMargin">1,1,0,0</Thickness>
             <Thickness x:Key="topRightHandleMargin">0,1,0,0</Thickness>
             <Thickness x:Key="bottomLeftHandleMargin">1,0,0,0</Thickness>
             <Thickness x:Key="bottomRightHandleMargin">0,0,0,0</Thickness>
-            <Visibility x:Key="selecting">Visible</Visibility>
-            <Visibility x:Key="editing">Visible</Visibility>
             <SolidColorBrush x:Key="handleBrush">#FFFFFFFF</SolidColorBrush>
             <SolidColorBrush x:Key="handleBorderBrush">#FF000000</SolidColorBrush>
             <BooleanToVisibilityConverter x:Key="BoolVisibilityConverter"/>

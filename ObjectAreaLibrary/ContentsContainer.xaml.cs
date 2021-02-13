@@ -7,6 +7,7 @@ namespace ObjectAreaLibrary
     public enum HandleType
     {
         None,
+        Fill,
         TopLeft,
         TopRight,
         BottomLeft,
@@ -20,31 +21,21 @@ namespace ObjectAreaLibrary
     {
         public ContentsContainer()
         {
-            // InitializeComponent前
+            InitializeComponent();
+
+            SetCanvasMarginFromParentThickness(BorderThickness);
+            Left = 0;
+            Top = 0;
+            ZIndex = 0;
+
             BorderThicknessProperty.OverrideMetadata(
                 typeof(ContentsContainer),
                 new FrameworkPropertyMetadata(default(Thickness), (d, e) => {
                     if (d is ContentsContainer areaItem)
                     {
-                        Thickness thickness = (Thickness)e.NewValue;
-                        double diff = (double)Resources["contentRectangleDiff"];
-                        CanvasMargin = new Thickness()
-                        {
-                            Left = -(thickness.Left + diff),
-                            Top = -(thickness.Top + diff),
-                            Right = -(thickness.Right + diff),
-                            Bottom = -(thickness.Bottom + diff),
-                        };
+                        SetCanvasMarginFromParentThickness((Thickness)e.NewValue);
                     }
                 }));
-
-            InitializeComponent();
-
-            Left = 0;
-            Top = 0;
-            ZIndex = 0;
-            Select = (Visibility)Resources["selecting"] == Visibility.Visible;
-            Edit = (Visibility)Resources["editing"] == Visibility.Visible;
         }
 
         #region CanvasMarginProperty
@@ -60,6 +51,18 @@ namespace ObjectAreaLibrary
         public Thickness CanvasMargin
         {   get { return (Thickness)GetValue(CanvasMarginProperty); }
             set { SetValue(CanvasMarginProperty, value); }
+        }
+
+        private void SetCanvasMarginFromParentThickness(Thickness thickness)
+        {
+            double diff = (double)Resources["contentRectangleDiff"];
+            CanvasMargin = new Thickness()
+            {
+                Left = -(thickness.Left + diff),
+                Top = -(thickness.Top + diff),
+                Right = -(thickness.Right + diff),
+                Bottom = -(thickness.Bottom + diff),
+            };
         }
         #endregion
 
@@ -203,16 +206,19 @@ namespace ObjectAreaLibrary
             switch (handleType)
             {
                 case HandleType.TopLeft:
-                    _offset = _topLeft - location;
+                    _offset = location - _topLeft;
                     break;
                 case HandleType.TopRight:
-                    _offset = new Vector(_topLeft.X + Width - location.X, _topLeft.Y - location.Y);
+                    _offset = new Vector(location.X - _topLeft.X - Width, location.Y - _topLeft.Y);
                     break;
                 case HandleType.BottomLeft:
-                    _offset = new Vector(_topLeft.X - location.X, _topLeft.Y + Height - location.Y);
+                    _offset = new Vector(location.X - _topLeft.X, location.Y - _topLeft.Y - Height);
                     break;
                 case HandleType.BottomRight:
-                    _offset = new Vector(_topLeft.X + Width - location.X, _topLeft.Y + Height - location.Y);
+                    _offset = new Vector(location.X - _topLeft.X - Width, location.Y - _topLeft.Y - Height);
+                    break;
+                case HandleType.Fill:
+                    _offset = location - _topLeft;
                     break;
             }
         }
@@ -222,16 +228,20 @@ namespace ObjectAreaLibrary
             switch (handleType)
             {
                 case HandleType.TopLeft:
-                    ResizeTopLeft(location);
+                    ResizeTopLeft(location - _offset);
                     break;
                 case HandleType.TopRight:
-                    ResizeTopRight(location);
+                    ResizeTopRight(location - _offset);
                     break;
                 case HandleType.BottomLeft:
-                    ResizeBottomLeft(location);
+                    ResizeBottomLeft(location - _offset);
                     break;
                 case HandleType.BottomRight:
-                    ResizeBottomRight(location);
+                    ResizeBottomRight(location - _offset);
+                    break;
+                case HandleType.Fill:
+                    MoveFill(location - _topLeft - _offset);
+                    _topLeft = new Point(Left, Top);
                     break;
             }
         }
@@ -267,36 +277,65 @@ namespace ObjectAreaLibrary
             Width = _topLeft.X > location.X ? _topLeft.X - location.X : location.X - _topLeft.X;
             Height = _topLeft.Y > location.Y ? _topLeft.Y - location.Y : location.Y - _topLeft.Y;
         }
+
+        private void MoveFill(Vector delta)
+        {
+            Left += delta.X;
+            Top += delta.Y;
+        }
         #endregion
 
         #region HitHandleFunction
         public HandleType HitHandle(Point parentLocation)
         {
-            if (HitTopLeft(parentLocation))
+            if (Edit)
             {
-                return HandleType.TopLeft;
+                if (HitTopLeft(parentLocation))
+                {
+                    return HandleType.TopLeft;
+                }
+                else if (HitTopRight(parentLocation))
+                {
+                    return HandleType.TopRight;
+                }
+                else if (HitBottomLeft(parentLocation))
+                {
+                    return HandleType.BottomLeft;
+                }
+                else if (HitBottomRight(parentLocation))
+                {
+                    return HandleType.BottomRight;
+                }
+                else if (HitFill(parentLocation))
+                {
+                    return HandleType.Fill;
+                }
             }
-            else if (HitTopRight(parentLocation))
+            else if (Select && HitFill(parentLocation))
             {
-                return HandleType.TopRight;
-            }
-            else if (HitBottomLeft(parentLocation))
-            {
-                return HandleType.BottomLeft;
-            }
-            else if (HitBottomRight(parentLocation))
-            {
-                return HandleType.BottomRight;
+                return HandleType.Fill;
             }
             return HandleType.None;
+        }
+
+        public bool HitFill(Point parentLocation)
+        {
+            Rect handleRect = new Rect()
+            {
+                X = Left,
+                Y = Top,
+                Width = Width,
+                Height = Height,
+            };
+            return handleRect.Contains(parentLocation);
         }
 
         private bool HitTopLeft(Point parentLocation)
         {
             Rect handleRect = new Rect()
             {
-                X = Left,
-                Y = Top,
+                X = Left - (double)Resources["contentRectangleDiff"],
+                Y = Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -307,8 +346,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth,
-                Y = Top + ((Thickness)Resources["topLeftHandleMargin"]).Top,
+                X = Left + ActualWidth - (double)Resources["contentRectangleDiff"],
+                Y = Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -319,8 +358,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left,
-                Y = Top + ActualHeight,
+                X = Left - (double)Resources["contentRectangleDiff"],
+                Y = Top + ActualHeight - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -331,8 +370,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth,
-                Y = Top + ActualHeight,
+                X = Left + ActualWidth - (double)Resources["contentRectangleDiff"],
+                Y = Top + ActualHeight - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };

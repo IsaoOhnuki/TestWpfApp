@@ -130,27 +130,30 @@ namespace ObjectAreaLibrary
                 foreach (var item in ItemGroup[areaItem.Group])
                 {
                     item.Select = value;
+                    item.Edit = value;
                 }
             }
             else
             {
                 areaItem.Select = value;
+                areaItem.Edit = value;
             }
         }
 
-        ContentsContainer _editItem;
-        public HandleType HitHandle(Point location)
+        public ContentsContainer FindItem(Point location)
         {
             foreach (var child in contentsCanvas.Children)
             {
-                if (child is ContentsContainer areaItem && areaItem.Edit)
+                if (child is ContentsContainer areaItem)
                 {
-                    _editItem = areaItem;
-                    return areaItem.HitHandle(location);
+                    var rect = new Rect(areaItem.Left, areaItem.Top, areaItem.Width, areaItem.Height);
+                    if (rect.Contains(location))
+                    {
+                        return areaItem;
+                    }
                 }
             }
-            _editItem = null;
-            return HandleType.None;
+            return null;
         }
         #endregion
 
@@ -160,8 +163,33 @@ namespace ObjectAreaLibrary
         private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             var location = e.GetPosition(sender as IInputElement);
-            _downPos = location;
-            _editItem?.Resizing(_handleType, location);
+            if (_editItem != null)
+            {
+                _downPos = location;
+                ItemSelect(_editItem, true);
+                _editItem?.Resizing(_handleType, location);
+            }
+            else
+            {
+                var areaItem = FindItem(location);
+                if (areaItem != null)
+                {
+                    if (!areaItem.Select)
+                    {
+                        _downPos = location;
+                        ItemSelect(_editItem, true);
+                        _editItem.Resizing(_handleType, location);
+                    }
+                }
+                else
+                {
+                    var selected = new AreaItems(Selected);
+                    foreach (var item in selected)
+                    {
+                        ItemSelect(item, false);
+                    }
+                }
+            }
         }
 
         private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
@@ -170,16 +198,26 @@ namespace ObjectAreaLibrary
         }
 
         HandleType _handleType;
+        ContentsContainer _editItem;
+
         private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             var location = e.GetPosition(sender as IInputElement);
             if (!_downPos.HasValue)
             {
-                _handleType = HitHandle(location);
+                _editItem = FindItem(location);
+                _handleType = HandleType.None;
+                if (_editItem != null)
+                {
+                    _handleType = _editItem.HitHandle(location);
+                }
                 switch (_handleType)
                 {
                     case HandleType.None:
                         Mouse.OverrideCursor = null;
+                        break;
+                    case HandleType.Fill:
+                        Mouse.OverrideCursor = Cursors.Hand;
                         break;
                     case HandleType.TopLeft:
                         Mouse.OverrideCursor = Cursors.SizeNWSE;
@@ -197,8 +235,7 @@ namespace ObjectAreaLibrary
             }
             else
             {
-                e.GetPosition(sender as IInputElement);
-                if (_editItem != null && _downPos != location)
+                if (_handleType != HandleType.None)
                 {
                     _downPos = location;
                     _editItem.Resize(_handleType, location);
