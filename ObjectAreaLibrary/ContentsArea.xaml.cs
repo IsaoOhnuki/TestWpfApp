@@ -26,9 +26,9 @@ namespace ObjectAreaLibrary
         void OnSecteChanged(IAreaItem areaItem, bool value);
     }
 
-    public class MockElement : UserControl, IAreaItem
+    public class MockAreaItem : UserControl, IAreaItem
     {
-        public MockElement()
+        public MockAreaItem()
         {
         }
 
@@ -391,11 +391,24 @@ namespace ObjectAreaLibrary
         HandleType _handleType;
         ContentsSelector _contentsSelector;
 
-        public void MoveArea(Point location)
+        public HandleType FindAreaItem(Point location)
         {
             if (!_downPos.HasValue)
             {
-                _handleType = FindArea(location);
+                _handleType = HandleType.None;
+                IAreaItem areaItem = FindItem(location, true);
+                if (areaItem != null)
+                {
+                    var select = GetSelectOperator(areaItem);
+                    if (select != null)
+                    {
+                        _handleType = select.HitHandle(location);
+                    }
+                    else
+                    {
+                        _handleType = HandleType.Fill;
+                    }
+                }
             }
             else if (_handleType != HandleType.None)
             {
@@ -406,9 +419,10 @@ namespace ObjectAreaLibrary
             {
                 _contentsSelector.SelectedBounds = new Rect(_downPos.Value, location);
             }
+            return _handleType;
         }
 
-        public void ConfirmItem(Point location)
+        public void ConfirmAreaItem(Point location)
         {
             if (_handleType != HandleType.None && _handleType != HandleType.Fill)
             {
@@ -438,7 +452,7 @@ namespace ObjectAreaLibrary
             }
         }
 
-        public void ReleaseItem()
+        public void ReleaseAreaItem()
         {
             _downPos = null;
             if (_contentsSelector != null)
@@ -449,23 +463,12 @@ namespace ObjectAreaLibrary
                 SelectFill(selectBounds);
             }
         }
+        #endregion
 
-        private HandleType FindArea(Point location)
+        #region MouseFunction
+        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
         {
-            HandleType handleType = HandleType.None;
-            IAreaItem areaItem = FindItem(location, true);
-            if (areaItem != null)
-            {
-                var select = GetSelectOperator(areaItem);
-                if (select != null)
-                {
-                    handleType = select.HitHandle(location);
-                }
-                else
-                {
-                    handleType = HandleType.Fill;
-                }
-            }
+            var handleType = FindAreaItem(e.GetPosition(sender as IInputElement));
             switch (handleType)
             {
                 case HandleType.None:
@@ -487,25 +490,17 @@ namespace ObjectAreaLibrary
                     Mouse.OverrideCursor = Cursors.SizeNWSE;
                     break;
             }
-            return handleType;
-        }
-        #endregion
-
-        #region MouseFunction
-        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            MoveArea(e.GetPosition(sender as IInputElement));
         }
 
         private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             Mouse.Capture(sender as IInputElement);
-            ConfirmItem(e.GetPosition(sender as IInputElement));
+            ConfirmAreaItem(e.GetPosition(sender as IInputElement));
         }
 
         private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
-            ReleaseItem();
+            ReleaseAreaItem();
             Mouse.Capture(null);
         }
         #endregion
