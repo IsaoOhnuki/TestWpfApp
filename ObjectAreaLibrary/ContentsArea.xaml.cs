@@ -389,68 +389,27 @@ namespace ObjectAreaLibrary
         #region ItemResize
         Point? _downPos = null;
         HandleType _handleType;
+        ContentsSelector _contentsSelector;
 
-        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        public void MoveArea(Point location)
         {
-            var location = e.GetPosition(sender as IInputElement);
             if (!_downPos.HasValue)
             {
-                _handleType = HandleType.None;
-                IAreaItem areaItem = FindItem(location, true);
-                if (areaItem != null)
-                {
-                    var select = GetSelectOperator(areaItem);
-                    if (select != null)
-                    {
-                        _handleType = select.HitHandle(location);
-                    }
-                    else
-                    {
-                        _handleType = HandleType.Fill;
-                    }
-                }
-                switch (_handleType)
-                {
-                    case HandleType.None:
-                        Mouse.OverrideCursor = null;
-                        break;
-                    case HandleType.Fill:
-                        Mouse.OverrideCursor = Cursors.Hand;
-                        break;
-                    case HandleType.TopLeft:
-                        Mouse.OverrideCursor = Cursors.SizeNWSE;
-                        break;
-                    case HandleType.TopRight:
-                        Mouse.OverrideCursor = Cursors.SizeNESW;
-                        break;
-                    case HandleType.BottomLeft:
-                        Mouse.OverrideCursor = Cursors.SizeNESW;
-                        break;
-                    case HandleType.BottomRight:
-                        Mouse.OverrideCursor = Cursors.SizeNWSE;
-                        break;
-                }
+                _handleType = FindArea(location);
+            }
+            else if (_handleType != HandleType.None)
+            {
+                _downPos = location;
+                ItemMove(_handleType, location);
             }
             else
             {
-                if (_handleType != HandleType.None)
-                {
-                    _downPos = location;
-                    ItemMove(_handleType, location);
-                }
-                else
-                {
-                    var bounds = new Rect(_downPos.Value, location);
-                    _contentsSelector.SelectedBounds = bounds;
-                }
+                _contentsSelector.SelectedBounds = new Rect(_downPos.Value, location);
             }
         }
 
-        ContentsSelector _contentsSelector;
-
-        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        public void ConfirmItem(Point location)
         {
-            var location = e.GetPosition(sender as IInputElement);
             if (_handleType != HandleType.None && _handleType != HandleType.Fill)
             {
                 _downPos = location;
@@ -479,7 +438,7 @@ namespace ObjectAreaLibrary
             }
         }
 
-        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        public void ReleaseItem()
         {
             _downPos = null;
             if (_contentsSelector != null)
@@ -489,6 +448,65 @@ namespace ObjectAreaLibrary
                 _contentsSelector = null;
                 SelectFill(selectBounds);
             }
+        }
+
+        private HandleType FindArea(Point location)
+        {
+            HandleType handleType = HandleType.None;
+            IAreaItem areaItem = FindItem(location, true);
+            if (areaItem != null)
+            {
+                var select = GetSelectOperator(areaItem);
+                if (select != null)
+                {
+                    handleType = select.HitHandle(location);
+                }
+                else
+                {
+                    handleType = HandleType.Fill;
+                }
+            }
+            switch (handleType)
+            {
+                case HandleType.None:
+                    Mouse.OverrideCursor = null;
+                    break;
+                case HandleType.Fill:
+                    Mouse.OverrideCursor = Cursors.Hand;
+                    break;
+                case HandleType.TopLeft:
+                    Mouse.OverrideCursor = Cursors.SizeNWSE;
+                    break;
+                case HandleType.TopRight:
+                    Mouse.OverrideCursor = Cursors.SizeNESW;
+                    break;
+                case HandleType.BottomLeft:
+                    Mouse.OverrideCursor = Cursors.SizeNESW;
+                    break;
+                case HandleType.BottomRight:
+                    Mouse.OverrideCursor = Cursors.SizeNWSE;
+                    break;
+            }
+            return handleType;
+        }
+        #endregion
+
+        #region MouseFunction
+        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            MoveArea(e.GetPosition(sender as IInputElement));
+        }
+
+        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            Mouse.Capture(sender as IInputElement);
+            ConfirmItem(e.GetPosition(sender as IInputElement));
+        }
+
+        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            ReleaseItem();
+            Mouse.Capture(null);
         }
         #endregion
     }
