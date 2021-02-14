@@ -1,0 +1,38 @@
+﻿<UserControl x:Class="ObjectAreaLibrary.ContentsSelector"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ObjectAreaLibrary"
+             xmlns:system="clr-namespace:System;assembly=mscorlib"
+             mc:Ignorable="d" 
+             d:DesignHeight="120" d:DesignWidth="200">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <system:Double x:Key="selectedOpacity">0.3</system:Double>
+            <system:Double x:Key="selectedFillOpacity">0.3</system:Double>
+            <system:Double x:Key="selectedThickness">1</system:Double>
+            <SolidColorBrush x:Key="selectedBrush">#FFFFFFFF</SolidColorBrush>
+            <SolidColorBrush x:Key="selectedBorderBrush">#FF000000</SolidColorBrush>
+            <SolidColorBrush x:Key="selectedFillBrush">#FFBCE1FF</SolidColorBrush>
+            <BooleanToVisibilityConverter x:Key="BoolVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource selectedFillBrush}"
+          Opacity="{StaticResource selectedFillOpacity}">
+        <Rectangle Width="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualWidth}"
+                   Height="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualHeight}"
+                   StrokeDashArray="4 4"
+                   Stroke="{StaticResource selectedBrush}"
+                   StrokeThickness="{StaticResource selectedThickness}"
+                   Opacity="{StaticResource selectedOpacity}"/>
+        <Rectangle Width="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualWidth}"
+                   Height="{Binding RelativeSource={RelativeSource AncestorType=UserControl}, Path=ActualHeight}"
+                   StrokeDashOffset="4"
+                   StrokeDashArray="4 4"
+                   Stroke="{StaticResource selectedBorderBrush}"
+                   StrokeThickness="{StaticResource selectedThickness}"
+                   Opacity="{StaticResource selectedOpacity}"/>
+    </Grid>
+</UserControl>

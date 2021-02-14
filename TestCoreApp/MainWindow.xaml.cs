@@ -25,7 +25,7 @@ namespace TestCoreApp
         {
             InitializeComponent();
 
-            contentsArea.AddContents(new CanvasElement()
+            contentsArea.AddContents(new MockElement()
             {
                 Background = new SolidColorBrush(Colors.Red),
                 BorderBrush = new SolidColorBrush(Colors.Black),
@@ -35,13 +35,23 @@ namespace TestCoreApp
                 Width = 200,
                 Height = 150,
             });
-            contentsArea.AddContents(new CanvasElement()
+            contentsArea.AddContents(new MockElement()
             {
                 Background = new SolidColorBrush(Colors.Blue),
                 BorderBrush = new SolidColorBrush(Colors.Black),
                 BorderThickness = new Thickness(2),
                 Left = 100,
                 Top = 0,
+                Width = 200,
+                Height = 150,
+            });
+            contentsArea.AddContents(new MockElement()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 200,
+                Top = 200,
                 Width = 200,
                 Height = 150,
             });
