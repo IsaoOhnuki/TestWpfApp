@@ -17,22 +17,50 @@ namespace ObjectAreaLibrary
     /// <summary>
     /// ContentsAreaItem.xaml の相互作用ロジック
     /// </summary>
-    public partial class ContentsContainer : UserControl
+    public partial class ContentsOperator : UserControl
     {
-        public ContentsContainer()
+        public ContentsOperator()
         {
             InitializeComponent();
         }
 
-        public bool Edit { get; set; }
+        private IAreaItem _contents;
 
-        public bool Select { get; set; }
+        public IAreaItem Contents
+        {
+            get { return _contents; }
+            set
+            {
+                _contents = value;
+                if (_contents != null)
+                {
+                    Left = _contents.Left;
+                    Top = _contents.Top;
+                    Width = _contents.Width;
+                    Height = _contents.Height;
+                }
+            }
+        }
+
+        #region EditProperty
+        public static readonly DependencyProperty EditProperty = DependencyProperty.Register(
+            nameof(Edit),
+            typeof(bool),
+            typeof(ContentsArea),
+            new FrameworkPropertyMetadata(false));
+
+        public bool Edit { get => (bool)GetValue(EditProperty); set => SetValue(EditProperty, value); }
+        #endregion
 
         #region LeftProperty
         public double Left
         {
             get { return Canvas.GetLeft(this); }
-            set { Canvas.SetLeft(this, value); }
+            set
+            {
+                Canvas.SetLeft(this, value);
+                _contents.Left = value;
+            }
         }
         #endregion
 
@@ -40,15 +68,11 @@ namespace ObjectAreaLibrary
         public double Top
         {
             get { return Canvas.GetTop(this); }
-            set { Canvas.SetTop(this, value); }
-        }
-        #endregion
-
-        #region ZIndexProperty
-        public int ZIndex
-        {
-            get { return Canvas.GetZIndex(this); }
-            set { Canvas.SetZIndex(this, value); }
+            set
+            {
+                Canvas.SetTop(this, value);
+                _contents.Top = value;
+            }
         }
         #endregion
 
@@ -169,7 +193,7 @@ namespace ObjectAreaLibrary
                     return HandleType.Fill;
                 }
             }
-            else if (Select && HitFill(parentLocation))
+            else if (HitFill(parentLocation))
             {
                 return HandleType.Fill;
             }
