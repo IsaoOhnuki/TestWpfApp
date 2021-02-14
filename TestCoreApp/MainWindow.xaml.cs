@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ObjectAreaLibrary;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,27 @@ namespace TestCoreApp
         public MainWindow()
         {
             InitializeComponent();
+
+            contentsArea.AddContents(new CanvasElement()
+            {
+                Background = new SolidColorBrush(Colors.Red),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 0,
+                Top = 0,
+                Width = 200,
+                Height = 150,
+            });
+            contentsArea.AddContents(new CanvasElement()
+            {
+                Background = new SolidColorBrush(Colors.Blue),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 100,
+                Top = 0,
+                Width = 200,
+                Height = 150,
+            });
         }
     }
 }

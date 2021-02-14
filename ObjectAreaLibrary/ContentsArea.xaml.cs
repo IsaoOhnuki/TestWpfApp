@@ -26,14 +26,13 @@ namespace ObjectAreaLibrary
         void OnSecteChanged(IAreaItem areaItem, bool value);
     }
 
-    public class CanvasElement : FrameworkElement, IAreaItem
+    public class CanvasElement : UserControl, IAreaItem
     {
         public CanvasElement()
         {
-
         }
 
-        public ContentsArea ParentArea => throw new NotImplementedException();
+        public ContentsArea ParentArea => ContentsArea.GetItemParentArea(this);
 
         public double Left { get => ContentsArea.GetItemLeft(this); set => ContentsArea.SetItemLeft(this, value); }
         public double Top { get => ContentsArea.GetItemTop(this); set => ContentsArea.SetItemTop(this, value); }
@@ -65,13 +64,16 @@ namespace ObjectAreaLibrary
         public ContentsArea()
         {
             InitializeComponent();
+
+            Selected = new AreaItems();
+            Grouped = new AreaItemsContainer();
         }
 
         #region AreaItemFunction
         public static ContentsArea GetItemParentArea(IAreaItem areaItem)
         {
             Debug.Assert(areaItem is FrameworkElement);
-            return (areaItem as FrameworkElement).Parent as ContentsArea;
+            return ((areaItem as FrameworkElement).Parent as Canvas).Parent as ContentsArea;
         }
 
         public static Rect GetItemBounds(IAreaItem areaItem)
@@ -253,13 +255,24 @@ namespace ObjectAreaLibrary
             };
             _selectOperator.Add(selectOperator);
             contentsCanvas.Children.Add(selectOperator);
+            if (_selectOperator.Count == 1)
+            {
+                selectOperator.Edit = true;
+            }
+            else
+            {
+                _selectOperator.ForEach(item => item.Edit = false);
+            }
         }
 
         void RemoveSelectOperator(IAreaItem areaItem)
         {
             var selectOperator = GetSelectOperator(areaItem);
-            contentsCanvas.Children.Add(selectOperator);
-            _selectOperator.Remove(selectOperator);
+            if (selectOperator != null)
+            {
+                contentsCanvas.Children.Remove(selectOperator);
+                _selectOperator.Remove(selectOperator);
+            }
         }
 
         ContentsOperator GetSelectOperator(IAreaItem areaItem)
@@ -272,8 +285,7 @@ namespace ObjectAreaLibrary
         {
             if (!string.IsNullOrEmpty(areaItem.Group))
             {
-                foreach (var item in Grouped[areaItem.Group])
-                {
+                Grouped[areaItem.Group].ForEach(item => {
                     if (value)
                     {
                         Selected.Add(item);
@@ -284,7 +296,7 @@ namespace ObjectAreaLibrary
                         Selected.Remove(item);
                         RemoveSelectOperator(item);
                     }
-                }
+                });
             }
             else
             {
@@ -315,11 +327,10 @@ namespace ObjectAreaLibrary
         {
             if (!string.IsNullOrEmpty(areaItem.Group))
             {
-                foreach (var item in Grouped[areaItem.Group])
-                {
+                Grouped[areaItem.Group].ForEach(item => {
                     item.Left += delta.X;
                     item.Top += delta.Y;
-                }
+                });
             }
             else
             {
@@ -328,8 +339,22 @@ namespace ObjectAreaLibrary
             }
         }
 
-        public IAreaItem FindItem(Point location)
+        public IAreaItem FindItem(Point location, bool select = false)
         {
+            if (select && _selectOperator.Count > 0)
+            {
+                foreach (var child in contentsCanvas.Children.OfType<ContentsOperator>())
+                {
+                    if (child is ContentsOperator selectOperator)
+                    {
+                        var hit = selectOperator.HitHandle(location);
+                        if (hit != HandleType.None)
+                        {
+                            return child.Contents;
+                        }
+                    }
+                }
+            }
             foreach (var child in contentsCanvas.Children.OfType<UIElement>().Reverse())
             {
                 if (child is IAreaItem areaItem)
@@ -355,10 +380,18 @@ namespace ObjectAreaLibrary
             if (!_downPos.HasValue)
             {
                 _handleType = HandleType.None;
-                IAreaItem areaItem = FindItem(location);
+                IAreaItem areaItem = FindItem(location, true);
                 if (areaItem != null)
                 {
-                    //_handleType = areaItem.HitHandle(location);
+                    var select = GetSelectOperator(areaItem);
+                    if (select != null)
+                    {
+                        _handleType = select.HitHandle(location);
+                    }
+                    else
+                    {
+                        _handleType = HandleType.Fill;
+                    }
                 }
                 switch (_handleType)
                 {
@@ -395,24 +428,28 @@ namespace ObjectAreaLibrary
         private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
             var location = e.GetPosition(sender as IInputElement);
-            if (_handleType == HandleType.None)
+            if (_handleType != HandleType.None && _handleType != HandleType.Fill)
             {
-                ClearSelected();
-                //_editItem = FindItem(location);
-                if (_editItem != null)
-                {
-                    _downPos = location;
-                    _handleType = HandleType.Fill;
-                    //ItemSelect(_editItem, true);
-                    _editItem.Resizing(_handleType, location);
-                }
+                _downPos = location;
+                _editItem.Resizing(_handleType, location);
             }
             else
             {
-                if (_editItem != null)
+                IAreaItem areaItem = FindItem(location);
+                if (areaItem != null)
                 {
+                    if (!areaItem.Select)
+                    {
+                        ClearSelected();
+                    }
                     _downPos = location;
+                    areaItem.Select = true;
+                    _editItem = GetSelectOperator(areaItem);
                     _editItem.Resizing(_handleType, location);
+                }
+                else
+                {
+                    ClearSelected();
                 }
             }
         }

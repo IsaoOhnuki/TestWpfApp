@@ -6,11 +6,9 @@
              xmlns:local="clr-namespace:ObjectAreaLibrary"
              mc:Ignorable="d" 
              d:DesignWidth="200" d:DesignHeight="120">
-    <Border x:Name="Border">
-        <Canvas x:Name="contentsCanvas"
-                Background="White"
-                PreviewMouseMove="contentsCanvas_PreviewMouseMove"
-                PreviewMouseDown="contentsCanvas_PreviewMouseDown"
-                PreviewMouseUp="contentsCanvas_PreviewMouseUp"/>
-    </Border>
+    <Canvas x:Name="contentsCanvas"
+            Background="White"
+            PreviewMouseMove="contentsCanvas_PreviewMouseMove"
+            PreviewMouseDown="contentsCanvas_PreviewMouseDown"
+            PreviewMouseUp="contentsCanvas_PreviewMouseUp"/>
 </UserControl>

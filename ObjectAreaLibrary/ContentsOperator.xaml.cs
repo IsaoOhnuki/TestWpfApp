@@ -76,6 +76,21 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
+        #region SizeChanged
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+        {
+            base.OnRenderSizeChanged(sizeInfo);
+            if (sizeInfo.WidthChanged)
+            {
+                _contents.Width = sizeInfo.NewSize.Width;
+            }
+            if (sizeInfo.HeightChanged)
+            {
+                _contents.Height = sizeInfo.NewSize.Height;
+            }
+        }
+        #endregion
+
         #region ResizeFunction
         private Point _topLeft;
         private Point _bottomRight;
@@ -216,8 +231,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - ((Thickness)Resources["topLeftHandleMargin"]).Left,
-                Y = Top - ((Thickness)Resources["topLeftHandleMargin"]).Top,
+                X = Left - ((Thickness)Resources["topLeftHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
+                Y = Top - ((Thickness)Resources["topLeftHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -228,8 +243,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - ((Thickness)Resources["topRightHandleMargin"]).Left,
-                Y = Top - ((Thickness)Resources["topRightHandleMargin"]).Top,
+                X = Left + ActualWidth - ((Thickness)Resources["topRightHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
+                Y = Top - ((Thickness)Resources["topRightHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -240,8 +255,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - ((Thickness)Resources["bottomLeftHandleMargin"]).Left,
-                Y = Top + ActualHeight - ((Thickness)Resources["bottomLeftHandleMargin"]).Top,
+                X = Left - ((Thickness)Resources["bottomLeftHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
+                Y = Top + ActualHeight - ((Thickness)Resources["bottomLeftHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };
@@ -252,8 +267,8 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - ((Thickness)Resources["bottomRightHandleMargin"]).Left,
-                Y = Top + ActualHeight - ((Thickness)Resources["bottomRightHandleMargin"]).Top,
+                X = Left + ActualWidth - ((Thickness)Resources["bottomRightHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
+                Y = Top + ActualHeight - ((Thickness)Resources["bottomRightHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
                 Width = (double)Resources["handleSize"],
                 Height = (double)Resources["handleSize"],
             };

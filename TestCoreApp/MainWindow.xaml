@@ -9,7 +9,7 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid>
 
-        <ObjectAreaLibrary:ContentsArea x:Name="area" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <ObjectAreaLibrary:ContentsArea x:Name="contentsArea" Background="White" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
     </Grid>
 </Window>
