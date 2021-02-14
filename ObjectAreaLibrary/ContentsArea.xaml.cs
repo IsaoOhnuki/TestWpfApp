@@ -253,7 +253,7 @@ namespace ObjectAreaLibrary
         public AreaItems Selected { get => (AreaItems)GetValue(SelectedProperty); private set => SetValue(SelectedPropertyKey, value); }
 
         #region SelectedOperatorFunction
-        private List<ContentsOperator> SelectOperator { get; } = new List<ContentsOperator>();
+        private List<ContentsOperator> SelectOperators { get; } = new List<ContentsOperator>();
 
         private void AddSelectOperator(IAreaItem areaItem)
         {
@@ -261,15 +261,15 @@ namespace ObjectAreaLibrary
             {
                 Contents = areaItem,
             };
-            SelectOperator.Add(selectOperator);
+            SelectOperators.Add(selectOperator);
             contentsCanvas.Children.Add(selectOperator);
-            if (SelectOperator.Count == 1)
+            if (SelectOperators.Count == 1)
             {
                 selectOperator.Edit = true;
             }
             else
             {
-                SelectOperator.ForEach(item => item.Edit = false);
+                SelectOperators.ForEach(item => item.Edit = false);
             }
         }
 
@@ -279,13 +279,13 @@ namespace ObjectAreaLibrary
             if (selectOperator != null)
             {
                 contentsCanvas.Children.Remove(selectOperator);
-                SelectOperator.Remove(selectOperator);
+                SelectOperators.Remove(selectOperator);
             }
         }
 
         private ContentsOperator GetSelectOperator(IAreaItem areaItem)
         {
-            return SelectOperator.Where(x => x.Contents == areaItem).FirstOrDefault();
+            return SelectOperators.Where(x => x.Contents == areaItem).FirstOrDefault();
         }
         #endregion
 
@@ -333,17 +333,17 @@ namespace ObjectAreaLibrary
         #region AreaItemsProperty
         public void ItemMoving(HandleType handleType, Point location)
         {
-            SelectOperator.ForEach(x => x.Resizing(handleType, location));
+            SelectOperators.ForEach(x => x.Resizing(handleType, location));
         }
 
         public void ItemMove(HandleType handleType, Point location)
         {
-            SelectOperator.ForEach(x => x.Resize(handleType, location));
+            SelectOperators.ForEach(x => x.Resize(handleType, location));
         }
 
         public IAreaItem FindItem(Point location, bool select = false)
         {
-            if (select && SelectOperator.Count > 0)
+            if (select && SelectOperators.Count > 0)
             {
                 foreach (var child in contentsCanvas.Children.OfType<ContentsOperator>())
                 {
