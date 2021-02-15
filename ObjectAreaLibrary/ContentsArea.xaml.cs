@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 
 namespace ObjectAreaLibrary
@@ -22,25 +23,42 @@ namespace ObjectAreaLibrary
         string Group { get; set; }
         bool Select { get; set; }
         Rect Bounds { get; }
+        event Action<IAreaItem, bool> SelectChangedEvent;
+        event Action<IAreaItem, string> GroupChangedEvent;
         void OnGroupChanged(IAreaItem areaItem, string value);
         void OnSecteChanged(IAreaItem areaItem, bool value);
     }
 
-    public class MockAreaItem : UserControl, IAreaItem
+    public class MockAreaItem : TextBlock, IAreaItem
     {
         public MockAreaItem()
         {
+            Binding myBinding = new Binding("Status");
+            myBinding.Source = this;
+            BindingOperations.SetBinding(this, TextBlock.TextProperty, myBinding);
         }
 
-        public ContentsArea ParentArea => ContentsArea.GetItemParentArea(this);
+        public static readonly DependencyProperty StatusProperty = DependencyProperty.Register(
+            "Status",
+            typeof(string),
+            typeof(MockAreaItem),
+            new FrameworkPropertyMetadata(default(string)));
 
+        public ContentsArea ParentArea { get => ContentsArea.GetItemParentArea(this); }
         public double Left { get => ContentsArea.GetItemLeft(this); set => ContentsArea.SetItemLeft(this, value); }
         public double Top { get => ContentsArea.GetItemTop(this); set => ContentsArea.SetItemTop(this, value); }
         public int ZIndex { get => ContentsArea.GetItemZIndex(this); set => ContentsArea.SetItemZIndex(this, value); }
         public string Group { get => ContentsArea.GetItemGroup(this); set => ContentsArea.SetItemGroup(this, value); }
-        public bool Select { get => ContentsArea.GetItemSelect(this); set => ContentsArea.SetItemSelect(this, value); }
-
-        public Rect Bounds => ContentsArea.GetItemBounds(this);
+        public bool Select
+        {
+            get => ContentsArea.GetItemSelect(this);
+            set
+            {
+                ContentsArea.SetItemSelect(this, value);
+                SetValue(StatusProperty, value.ToString());
+            }
+        }
+        public Rect Bounds { get => ContentsArea.GetItemBounds(this); }
 
         public event Action<IAreaItem, bool> SelectChangedEvent;
         public event Action<IAreaItem, string> GroupChangedEvent;
@@ -73,7 +91,7 @@ namespace ObjectAreaLibrary
         public static ContentsArea GetItemParentArea(IAreaItem areaItem)
         {
             Debug.Assert(areaItem is FrameworkElement);
-            return ((areaItem as FrameworkElement).Parent as Canvas).Parent as ContentsArea;
+            return ((areaItem as FrameworkElement).Parent as Canvas)?.Parent as ContentsArea;
         }
 
         public static Rect GetItemBounds(IAreaItem areaItem)
@@ -153,8 +171,8 @@ namespace ObjectAreaLibrary
                 if (!contentsCanvas.Children.Contains(uIElement))
                 {
                     contentsCanvas.Children.Add(uIElement);
-                    ItemSelected(areaItem, areaItem.Select);
                     ItemGrouped(areaItem, areaItem.Group);
+                    ItemSelected(areaItem, areaItem.Select);
                 }
             }
         }
@@ -165,8 +183,8 @@ namespace ObjectAreaLibrary
             {
                 if (contentsCanvas.Children.Contains(uIElement))
                 {
-                    ItemGrouped(areaItem, "");
                     ItemSelected(areaItem, false);
+                    ItemGrouped(areaItem, "");
                     contentsCanvas.Children.Remove(uIElement);
                 }
             }
@@ -183,7 +201,7 @@ namespace ObjectAreaLibrary
                 {
                     var parent = areaItem.ParentArea;
                     var value = (string)e.NewValue;
-                    parent.ItemGrouped(areaItem, value);
+                    parent?.ItemGrouped(areaItem, value);
                     areaItem.OnGroupChanged(areaItem, (string)e.NewValue);
                 }
             }));
@@ -199,7 +217,7 @@ namespace ObjectAreaLibrary
                 {
                     var parent = areaItem.ParentArea;
                     var value = (bool)e.NewValue;
-                    parent.ItemSelected(areaItem, value);
+                    parent?.ItemSelected(areaItem, value);
                     areaItem.OnSecteChanged(areaItem, value);
                 }
             }));
@@ -232,7 +250,7 @@ namespace ObjectAreaLibrary
             }
             if (!string.IsNullOrEmpty(value))
             {
-                if (!Grouped.Keys.Contains(value))
+                if (!Grouped.ContainsKey(value))
                 {
                     Grouped[value] = new AreaItems();
                 }
@@ -281,6 +299,10 @@ namespace ObjectAreaLibrary
                 contentsCanvas.Children.Remove(selectOperator);
                 SelectOperators.Remove(selectOperator);
             }
+            if (SelectOperators.Count == 1)
+            {
+                SelectOperators[0].Edit = true;
+            }
         }
 
         private ContentsOperator GetSelectOperator(IAreaItem areaItem)
@@ -293,7 +315,13 @@ namespace ObjectAreaLibrary
         {
             if (!string.IsNullOrEmpty(areaItem.Group))
             {
-                Grouped[areaItem.Group].ForEach(item => {
+                Debug.Assert(Grouped.ContainsKey(areaItem.Group));
+                Grouped[areaItem.Group].ForEach(item =>
+                {
+                    if (item.Select != value)
+                    {
+                        item.Select = value;
+                    }
                     if (value)
                     {
                         Selected.Add(item);
@@ -301,8 +329,8 @@ namespace ObjectAreaLibrary
                     }
                     else
                     {
-                        Selected.Remove(item);
                         RemoveSelectOperator(item);
+                        Selected.Remove(item);
                     }
                 });
             }
@@ -315,8 +343,8 @@ namespace ObjectAreaLibrary
                 }
                 else
                 {
-                    Selected.Remove(areaItem);
                     RemoveSelectOperator(areaItem);
+                    Selected.Remove(areaItem);
                 }
             }
         }
@@ -370,7 +398,7 @@ namespace ObjectAreaLibrary
             return null;
         }
 
-        private void SelectFill(Rect fill)
+        private void SelectFill(Rect fill, bool remove)
         {
             foreach (var child in contentsCanvas.Children.OfType<UIElement>().Reverse())
             {
@@ -379,7 +407,7 @@ namespace ObjectAreaLibrary
                     var intersect = Rect.Intersect(areaItem.Bounds, fill);
                     if (intersect.Width > 0 || intersect.Height > 0)
                     {
-                        areaItem.Select = true;
+                        areaItem.Select = !remove;
                     }
                 }
             }
@@ -422,7 +450,7 @@ namespace ObjectAreaLibrary
             return _handleType;
         }
 
-        public void ConfirmAreaItem(Point location)
+        public void ConfirmAreaItem(Point location, bool ctrlKey)
         {
             if (_handleType != HandleType.None && _handleType != HandleType.Fill)
             {
@@ -434,17 +462,27 @@ namespace ObjectAreaLibrary
                 IAreaItem areaItem = FindItem(location);
                 if (areaItem != null)
                 {
-                    if (!areaItem.Select)
+                    if (ctrlKey)
                     {
-                        ClearSelected();
+                        areaItem.Select = !areaItem.Select;
                     }
-                    _downPos = location;
-                    areaItem.Select = true;
-                    ItemMoving(_handleType, location);
+                    else
+                    {
+                        if (!areaItem.Select)
+                        {
+                            ClearSelected();
+                        }
+                        _downPos = location;
+                        areaItem.Select = true;
+                        ItemMoving(_handleType, location);
+                    }
                 }
                 else
                 {
-                    ClearSelected();
+                    if (!ctrlKey)
+                    {
+                        ClearSelected();
+                    }
                     _downPos = location;
                     _contentsSelector = new ContentsSelector();
                     contentsCanvas.Children.Add(_contentsSelector);
@@ -452,7 +490,7 @@ namespace ObjectAreaLibrary
             }
         }
 
-        public void ReleaseAreaItem()
+        public void ReleaseAreaItem(bool ctrlKey)
         {
             _downPos = null;
             if (_contentsSelector != null)
@@ -460,7 +498,7 @@ namespace ObjectAreaLibrary
                 contentsCanvas.Children.Remove(_contentsSelector);
                 var selectBounds = _contentsSelector.SelectedBounds;
                 _contentsSelector = null;
-                SelectFill(selectBounds);
+                SelectFill(selectBounds, ctrlKey);
             }
         }
         #endregion
@@ -494,14 +532,22 @@ namespace ObjectAreaLibrary
 
         private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
-            Mouse.Capture(sender as IInputElement);
-            ConfirmAreaItem(e.GetPosition(sender as IInputElement));
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Mouse.Capture(sender as IInputElement);
+                bool ctrlKey = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                ConfirmAreaItem(e.GetPosition(sender as IInputElement), ctrlKey);
+            }
         }
 
         private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
-            ReleaseAreaItem();
-            Mouse.Capture(null);
+            if (e.LeftButton == MouseButtonState.Released)
+            {
+                bool ctrlKey = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                ReleaseAreaItem(ctrlKey);
+                Mouse.Capture(null);
+            }
         }
         #endregion
     }

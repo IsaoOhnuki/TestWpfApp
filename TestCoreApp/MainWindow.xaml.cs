@@ -28,28 +28,30 @@ namespace TestCoreApp
             contentsArea.AddContents(new MockAreaItem()
             {
                 Background = new SolidColorBrush(Colors.Red),
-                BorderBrush = new SolidColorBrush(Colors.Black),
-                BorderThickness = new Thickness(2),
+                //BorderBrush = new SolidColorBrush(Colors.Black),
+                //BorderThickness = new Thickness(2),
                 Left = 0,
                 Top = 0,
                 Width = 200,
                 Height = 150,
+                Group = "a",
             });
             contentsArea.AddContents(new MockAreaItem()
             {
                 Background = new SolidColorBrush(Colors.Blue),
-                BorderBrush = new SolidColorBrush(Colors.Black),
-                BorderThickness = new Thickness(2),
+                //BorderBrush = new SolidColorBrush(Colors.Black),
+                //BorderThickness = new Thickness(2),
                 Left = 100,
                 Top = 0,
                 Width = 200,
                 Height = 150,
+                Group = "a",
             });
             contentsArea.AddContents(new MockAreaItem()
             {
                 Background = new SolidColorBrush(Colors.Green),
-                BorderBrush = new SolidColorBrush(Colors.Black),
-                BorderThickness = new Thickness(2),
+                //BorderBrush = new SolidColorBrush(Colors.Black),
+                //BorderThickness = new Thickness(2),
                 Left = 200,
                 Top = 200,
                 Width = 200,

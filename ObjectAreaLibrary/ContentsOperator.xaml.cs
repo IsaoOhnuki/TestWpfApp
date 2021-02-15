@@ -15,13 +15,27 @@ namespace ObjectAreaLibrary
     }
 
     /// <summary>
-    /// ContentsAreaItem.xaml の相互作用ロジック
+    /// ContentsOperator.xaml の相互作用ロジック
     /// </summary>
     public partial class ContentsOperator : UserControl
     {
+        private readonly double HandleSize;
+        private readonly double ContentRectangleDiff;
+        private readonly Thickness TopLeftHandleMargin;
+        private readonly Thickness TopRightHandleMargin;
+        private readonly Thickness BottomLeftHandleMargin;
+        private readonly Thickness BottomRightHandleMargin;
+
         public ContentsOperator()
         {
             InitializeComponent();
+
+            HandleSize = (double)Resources["handleSize"];
+            ContentRectangleDiff = (double)Resources["contentRectangleDiff"];
+            TopLeftHandleMargin = ((Thickness)Resources["topLeftHandleMargin"]);
+            TopRightHandleMargin = ((Thickness)Resources["topRightHandleMargin"]);
+            BottomLeftHandleMargin = ((Thickness)Resources["bottomLeftHandleMargin"]);
+            BottomRightHandleMargin = ((Thickness)Resources["bottomRightHandleMargin"]);
         }
 
         private IAreaItem _contents;
@@ -46,7 +60,7 @@ namespace ObjectAreaLibrary
         public static readonly DependencyProperty EditProperty = DependencyProperty.Register(
             nameof(Edit),
             typeof(bool),
-            typeof(ContentsArea),
+            typeof(ContentsOperator),
             new FrameworkPropertyMetadata(false));
 
         public bool Edit { get => (bool)GetValue(EditProperty); set => SetValue(EditProperty, value); }
@@ -231,10 +245,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - ((Thickness)Resources["topLeftHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
-                Y = Top - ((Thickness)Resources["topLeftHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
-                Width = (double)Resources["handleSize"],
-                Height = (double)Resources["handleSize"],
+                X = Left - TopLeftHandleMargin.Left - ContentRectangleDiff,
+                Y = Top - TopLeftHandleMargin.Top - ContentRectangleDiff,
+                Width = HandleSize,
+                Height = HandleSize,
             };
             return handleRect.Contains(parentLocation);
         }
@@ -243,10 +257,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - ((Thickness)Resources["topRightHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
-                Y = Top - ((Thickness)Resources["topRightHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
-                Width = (double)Resources["handleSize"],
-                Height = (double)Resources["handleSize"],
+                X = Left + ActualWidth - TopRightHandleMargin.Left - ContentRectangleDiff,
+                Y = Top - TopRightHandleMargin.Top - ContentRectangleDiff,
+                Width = HandleSize,
+                Height = HandleSize,
             };
             return handleRect.Contains(parentLocation);
         }
@@ -255,10 +269,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left - ((Thickness)Resources["bottomLeftHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
-                Y = Top + ActualHeight - ((Thickness)Resources["bottomLeftHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
-                Width = (double)Resources["handleSize"],
-                Height = (double)Resources["handleSize"],
+                X = Left - BottomLeftHandleMargin.Left - ContentRectangleDiff,
+                Y = Top + ActualHeight - BottomLeftHandleMargin.Top - ContentRectangleDiff,
+                Width = HandleSize,
+                Height = HandleSize,
             };
             return handleRect.Contains(parentLocation);
         }
@@ -267,10 +281,10 @@ namespace ObjectAreaLibrary
         {
             Rect handleRect = new Rect()
             {
-                X = Left + ActualWidth - ((Thickness)Resources["bottomRightHandleMargin"]).Left - (double)Resources["contentRectangleDiff"],
-                Y = Top + ActualHeight - ((Thickness)Resources["bottomRightHandleMargin"]).Top - (double)Resources["contentRectangleDiff"],
-                Width = (double)Resources["handleSize"],
-                Height = (double)Resources["handleSize"],
+                X = Left + ActualWidth - BottomRightHandleMargin.Left - ContentRectangleDiff,
+                Y = Top + ActualHeight - BottomRightHandleMargin.Top - ContentRectangleDiff,
+                Width = HandleSize,
+                Height = HandleSize,
             };
             return handleRect.Contains(parentLocation);
         }
