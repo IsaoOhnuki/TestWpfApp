@@ -38,9 +38,9 @@ namespace ObjectAreaLibrary
             BottomRightHandleMargin = ((Thickness)Resources["bottomRightHandleMargin"]);
         }
 
-        private IAreaItem _contents;
+        private IAreaContents _contents;
 
-        public IAreaItem Contents
+        public IAreaContents Contents
         {
             get { return _contents; }
             set
