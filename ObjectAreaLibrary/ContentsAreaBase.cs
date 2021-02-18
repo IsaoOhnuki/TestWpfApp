@@ -10,23 +10,35 @@ namespace ObjectAreaLibrary
 {
     using AreaItems = List<IAreaContents>;
     using AreaItemsContainer = Dictionary<string, List<IAreaContents>>;
+
     /// <summary>
     /// ContentsAreaのアイテムinterface
     /// </summary>
     public interface IAreaContents
     {
         ContentsArea ParentArea { get; }
+
         double Left { get; set; }
+
         double Top { get; set; }
+
         double Width { get; set; }
+
         double Height { get; set; }
+
         int ZIndex { get; set; }
+
         string Group { get; set; }
+
         bool Select { get; set; }
+
         Rect Bounds { get; }
+
         event Action<IAreaContents, bool> SelectChangedEvent;
         event Action<IAreaContents, string> GroupChangedEvent;
+
         void OnGroupChanged(IAreaContents areaItem, string value);
+
         void OnSecteChanged(IAreaContents areaItem, bool value);
     }
 
@@ -38,6 +50,8 @@ namespace ObjectAreaLibrary
         public ContentsAreaBase(Canvas canvas)
         {
             ContentsCanvas = canvas;
+            AreaItemSelectOperator = new AreaItemSelectOperator(canvas);
+            AreaItemOperator = new AreaItemOperator(canvas);
         }
 
         #region CanvasProperty
@@ -92,9 +106,8 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region GroupProperty
-        private AreaItemsContainer _grouped;
-        public AreaItemsContainer Grouped { get => _grouped ??= new AreaItemsContainer(); }
+        #region GroupedProperty
+        public AreaItemsContainer Grouped { get; } = new AreaItemsContainer();
 
         public void SetGroupe(IAreaContents areaItem, string value)
         {
@@ -121,12 +134,10 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region SelectProperty
-        private AreaItems _selected;
-        public AreaItems Selected { get => _selected ??= new AreaItems(); }
+        #region SelectedProperty
+        public AreaItems Selected { get; } = new AreaItems();
 
-        AreaItemSelectOperator _areaItemSelectOperator;
-        AreaItemSelectOperator AreaItemSelectOperator { get => _areaItemSelectOperator ??= new AreaItemSelectOperator(ContentsCanvas); }
+        private AreaItemSelectOperator AreaItemSelectOperator { get; set; }
 
         public void SetSelect(IAreaContents areaItem, bool value)
         {
@@ -168,8 +179,7 @@ namespace ObjectAreaLibrary
         #endregion
 
         #region AreaItemsFunction
-        AreaItemOperator _areaItemOperator;
-        AreaItemOperator AreaItemOperator { get => _areaItemOperator ??= new AreaItemOperator(ContentsCanvas); }
+        private AreaItemOperator AreaItemOperator { get; set; }
 
         public IAreaContents Find(Point location, bool select = false)
         {

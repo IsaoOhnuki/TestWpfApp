@@ -14,6 +14,10 @@ namespace ObjectAreaLibrary
     /// </summary>
     public partial class ContentsArea : UserControl
     {
+        public Canvas ContentsCanvas { get => ContentsAreaBase.ContentsCanvas; }
+
+        private ContentsAreaBase ContentsAreaBase { get; set; }
+
         public ContentsArea()
         {
             InitializeComponent();
@@ -95,28 +99,7 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region CanvasProperty
-        private ContentsAreaBase ContentsAreaBase { get; set; }
-
-        public Canvas ContentsCanvas { get => ContentsAreaBase.ContentsCanvas; }
-
-        public void Add(IAreaContents areaItem)
-        {
-            ContentsAreaBase.Add(areaItem);
-        }
-
-        public void Remove(IAreaContents areaItem)
-        {
-            ContentsAreaBase.Remove(areaItem);
-        }
-
-        public void Clear()
-        {
-            ContentsAreaBase.Clear();
-        }
-        #endregion
-
-        #region GroupProperty
+        #region DependencyProperty
         public static readonly DependencyProperty GroupProperty = DependencyProperty.RegisterAttached(
             "Group",
             typeof(string),
@@ -130,9 +113,7 @@ namespace ObjectAreaLibrary
                     areaItem.OnGroupChanged(areaItem, (string)e.NewValue);
                 }
             }));
-        #endregion
 
-        #region SelectProperty
         public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
             "Select",
             typeof(bool),
@@ -148,7 +129,21 @@ namespace ObjectAreaLibrary
             }));
         #endregion
 
-        #region AreaItemsFunction
+        public void Add(IAreaContents areaItem)
+        {
+            ContentsAreaBase.Add(areaItem);
+        }
+
+        public void Remove(IAreaContents areaItem)
+        {
+            ContentsAreaBase.Remove(areaItem);
+        }
+
+        public void Clear()
+        {
+            ContentsAreaBase.Clear();
+        }
+
         public IAreaContents Find(Point location, bool select = false)
         {
             return ContentsAreaBase.Find(location, select);
@@ -156,7 +151,7 @@ namespace ObjectAreaLibrary
 
         public void ClearAllSelect()
         {
-            ContentsAreaBase.Clear();
+            ContentsAreaBase.ClearAllSelect();
         }
 
         public void SelectFill(Rect fill, bool revers)
@@ -173,9 +168,7 @@ namespace ObjectAreaLibrary
         {
             ContentsAreaBase.Relocation(handleType, location);
         }
-        #endregion
 
-        #region MouseFunction
         private void ContentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             ContentsAreaBase.CanvasMouseMove(sender as IInputElement, e);
@@ -190,7 +183,6 @@ namespace ObjectAreaLibrary
         {
             ContentsAreaBase.CanvasMouseUp(e);
         }
-        #endregion
     }
 
     /// <summary>
