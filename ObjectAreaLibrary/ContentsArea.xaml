@@ -8,7 +8,7 @@
              d:DesignWidth="200" d:DesignHeight="120">
     <Canvas x:Name="contentsCanvas"
             Background="White"
-            PreviewMouseMove="contentsCanvas_PreviewMouseMove"
-            PreviewMouseDown="contentsCanvas_PreviewMouseDown"
-            PreviewMouseUp="contentsCanvas_PreviewMouseUp"/>
+            PreviewMouseMove="ContentsCanvas_PreviewMouseMove"
+            PreviewMouseDown="ContentsCanvas_PreviewMouseDown"
+            PreviewMouseUp="ContentsCanvas_PreviewMouseUp"/>
 </UserControl>

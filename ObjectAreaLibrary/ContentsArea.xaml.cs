@@ -41,6 +41,7 @@ namespace ObjectAreaLibrary
     {
         public MockAreaContents()
         {
+            SnapsToDevicePixels = true;
             IsReadOnly = true;
             Binding textBinding = new Binding("TextSetter")
             {
@@ -136,6 +137,14 @@ namespace ObjectAreaLibrary
             InitializeComponent();
         }
 
+        public ContentsArea(Canvas canvas, Visibility canvasVisibility)
+        {
+            InitializeComponent();
+
+            _contentsCanvas = canvas;
+            contentsCanvas.Visibility = canvasVisibility;
+        }
+
         #region AreaItemFunction
         public static ContentsArea GetItemParentArea(IAreaContents areaItem)
         {
@@ -211,30 +220,53 @@ namespace ObjectAreaLibrary
         #endregion
 
         #region CanvasProperty
-        public Canvas ContentsCanvas { get => contentsCanvas; }
+        private Canvas _contentsCanvas;
+        public Canvas ContentsCanvas { get => _contentsCanvas ??= contentsCanvas; }
 
-        public void AddContents(IAreaContents areaItem)
+        public void Add(IAreaContents areaItem)
         {
             if (areaItem is UIElement uIElement)
             {
-                if (!contentsCanvas.Children.Contains(uIElement))
+                if (!ContentsCanvas.Children.Contains(uIElement))
                 {
-                    contentsCanvas.Children.Add(uIElement);
-                    ItemGrouped(areaItem, areaItem.Group);
-                    ItemSelected(areaItem, areaItem.Select);
+                    ContentsCanvas.Children.Add(uIElement);
+                    SetGroupe(areaItem, areaItem.Group);
+                    SetSelect(areaItem, areaItem.Select);
                 }
             }
         }
 
-        public void RemoveContents(IAreaContents areaItem)
+        public void Remove(IAreaContents areaItem)
         {
             if (areaItem is UIElement uIElement)
             {
-                if (contentsCanvas.Children.Contains(uIElement))
+                if (ContentsCanvas.Children.Contains(uIElement))
                 {
-                    ItemSelected(areaItem, false);
-                    ItemGrouped(areaItem, "");
-                    contentsCanvas.Children.Remove(uIElement);
+                    ContentsCanvas.Children.Remove(uIElement);
+                    if (string.IsNullOrEmpty(areaItem.Group))
+                    {
+                        Grouped[areaItem.Group].Remove(areaItem);
+                        if (Grouped[areaItem.Group].Count == 0)
+                        {
+                            Grouped.Remove(areaItem.Group);
+                        }
+                    }
+                    if (areaItem.Select)
+                    {
+                        AreaItemSelectOperator.Remove(areaItem);
+                        Selected.Remove(areaItem);
+                    }
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            foreach (var child in ContentsCanvas.Children.OfType<UIElement>().Reverse())
+            {
+                if (child is IAreaContents areaItem)
+                {
+                    Remove(areaItem);
                 }
             }
         }
@@ -250,40 +282,15 @@ namespace ObjectAreaLibrary
                 {
                     var parent = areaItem.ParentArea;
                     var value = (string)e.NewValue;
-                    parent?.ItemGrouped(areaItem, value);
+                    parent?.SetGroupe(areaItem, value);
                     areaItem.OnGroupChanged(areaItem, (string)e.NewValue);
                 }
             }));
-        #endregion
 
-        #region SelectProperty
-        public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
-            "Select",
-            typeof(bool),
-            typeof(ContentsArea),
-            new FrameworkPropertyMetadata(false, (d, e) => {
-                if (d is IAreaContents areaItem)
-                {
-                    var parent = areaItem.ParentArea;
-                    var value = (bool)e.NewValue;
-                    parent?.ItemSelected(areaItem, value);
-                    areaItem.OnSecteChanged(areaItem, value);
-                }
-            }));
-        #endregion
+        private AreaItemsContainer _grouped;
+        public AreaItemsContainer Grouped { get => _grouped ??= new AreaItemsContainer(); }
 
-        #region GroupedProperty
-        private static readonly DependencyPropertyKey GroupedPropertyKey = DependencyProperty.RegisterReadOnly(
-            nameof(Grouped),
-            typeof(AreaItemsContainer),
-            typeof(ContentsArea),
-            new FrameworkPropertyMetadata(new AreaItemsContainer()));
-
-        public static readonly DependencyProperty GroupedProperty = GroupedPropertyKey.DependencyProperty;
-
-        public AreaItemsContainer Grouped { get => (AreaItemsContainer)GetValue(GroupedProperty); private set => SetValue(GroupedPropertyKey, value); }
-
-        internal void ItemGrouped(IAreaContents areaItem, string value)
+        private void SetGroupe(IAreaContents areaItem, string value)
         {
             foreach (var group in Grouped)
             {
@@ -308,21 +315,28 @@ namespace ObjectAreaLibrary
         }
         #endregion
 
-        #region SelectedProperty
-        private static readonly DependencyPropertyKey SelectedPropertyKey = DependencyProperty.RegisterReadOnly(
-            nameof(Selected),
-            typeof(AreaItems),
+        #region SelectProperty
+        public static readonly DependencyProperty SelectProperty = DependencyProperty.RegisterAttached(
+            "Select",
+            typeof(bool),
             typeof(ContentsArea),
-            new FrameworkPropertyMetadata(new AreaItems()));
+            new FrameworkPropertyMetadata(false, (d, e) => {
+                if (d is IAreaContents areaItem)
+                {
+                    var parent = areaItem.ParentArea;
+                    var value = (bool)e.NewValue;
+                    parent?.SetSelect(areaItem, value);
+                    areaItem.OnSecteChanged(areaItem, value);
+                }
+            }));
 
-        public static readonly DependencyProperty SelectedProperty = SelectedPropertyKey.DependencyProperty;
-
-        public AreaItems Selected { get => (AreaItems)GetValue(SelectedProperty); private set => SetValue(SelectedPropertyKey, value); }
+        private AreaItems _selected;
+        public AreaItems Selected { get => _selected ??= new AreaItems(); }
 
         AreaItemSelectOperator _areaItemSelectOperator;
         AreaItemSelectOperator AreaItemSelectOperator { get => _areaItemSelectOperator ??= new AreaItemSelectOperator(ContentsCanvas); }
 
-        public void ItemSelected(IAreaContents areaItem, bool value)
+        private void SetSelect(IAreaContents areaItem, bool value)
         {
             if (!string.IsNullOrEmpty(areaItem.Group))
             {
@@ -359,32 +373,17 @@ namespace ObjectAreaLibrary
                 }
             }
         }
-
-        public void ClearSelected()
-        {
-            foreach (var item in Selected.OfType<IAreaContents>().Reverse())
-            {
-                item.Select = false;
-            }
-        }
         #endregion
 
         #region AreaItemsFunction
-        public void StartMoveItem(HandleType handleType, Point location)
-        {
-            AreaItemSelectOperator.SelectOperators.ForEach(x => x.Resizing(handleType, location));
-        }
+        AreaItemOperator _areaItemOperator;
+        AreaItemOperator AreaItemOperator { get => _areaItemOperator ??= new AreaItemOperator(ContentsCanvas); }
 
-        public void MoveItem(HandleType handleType, Point location)
-        {
-            AreaItemSelectOperator.SelectOperators.ForEach(x => x.Resize(handleType, location));
-        }
-
-        public IAreaContents FindItem(Point location, bool select = false)
+        public IAreaContents Find(Point location, bool select = false)
         {
             if (select && AreaItemSelectOperator.SelectOperators.Count > 0)
             {
-                foreach (var child in contentsCanvas.Children.OfType<ContentsOperator>())
+                foreach (var child in ContentsCanvas.Children.OfType<ContentsOperator>())
                 {
                     if (child is ContentsOperator selectOperator)
                     {
@@ -396,7 +395,7 @@ namespace ObjectAreaLibrary
                     }
                 }
             }
-            foreach (var child in contentsCanvas.Children.OfType<UIElement>().Reverse())
+            foreach (var child in ContentsCanvas.Children.OfType<UIElement>().Reverse())
             {
                 if (child is IAreaContents areaItem)
                 {
@@ -409,9 +408,17 @@ namespace ObjectAreaLibrary
             return null;
         }
 
+        public void ClearAllSelect()
+        {
+            foreach (var item in Selected.OfType<IAreaContents>().Reverse())
+            {
+                item.Select = false;
+            }
+        }
+
         public void SelectFill(Rect fill, bool revers)
         {
-            foreach (var child in contentsCanvas.Children.OfType<UIElement>().Reverse())
+            foreach (var child in ContentsCanvas.Children.OfType<UIElement>().Reverse())
             {
                 if (child is IAreaContents areaItem)
                 {
@@ -423,17 +430,24 @@ namespace ObjectAreaLibrary
                 }
             }
         }
+
+        public void StartRelocation(HandleType handleType, Point location)
+        {
+            AreaItemSelectOperator.SelectOperators.ForEach(x => x.Resizing(handleType, location));
+        }
+
+        public void Relocation(HandleType handleType, Point location)
+        {
+            AreaItemSelectOperator.SelectOperators.ForEach(x => x.Resize(handleType, location));
+        }
         #endregion
 
         #region MouseFunction
-        AreaItemOperator _areaItemOperator;
-        AreaItemOperator AreaItemOperator { get => _areaItemOperator ??= new AreaItemOperator(ContentsCanvas); }
-
-        private void contentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        public void CanvasMouseMove(IInputElement sender, MouseEventArgs e)
         {
             var handleType = AreaItemOperator.IsCatchAreaItem
-                ? AreaItemOperator.Move(e.GetPosition(sender as IInputElement), MoveItem)
-                : AreaItemOperator.Find(e.GetPosition(sender as IInputElement), FindItem, AreaItemSelectOperator.GetSelectOperator);
+                ? AreaItemOperator.Move(e.GetPosition(sender), Relocation)
+                : AreaItemOperator.Find(e.GetPosition(sender), Find, AreaItemSelectOperator.GetSelectOperator);
 
             switch (handleType)
             {
@@ -458,17 +472,17 @@ namespace ObjectAreaLibrary
             }
         }
 
-        private void contentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        public void CanvasMouseDown(IInputElement sender, MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                Mouse.Capture(sender as IInputElement);
+                Mouse.Capture(sender);
                 bool ctrlKey = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
-                AreaItemOperator.Catch(e.GetPosition(sender as IInputElement), ctrlKey, FindItem, StartMoveItem, ClearSelected);
+                AreaItemOperator.Catch(e.GetPosition(sender), ctrlKey, Find, StartRelocation, ClearAllSelect);
             }
         }
 
-        private void contentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        public void CanvasMouseUp(MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Released)
             {
@@ -477,9 +491,27 @@ namespace ObjectAreaLibrary
                 Mouse.Capture(null);
             }
         }
+
+        private void ContentsCanvas_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            CanvasMouseMove(sender as IInputElement, e);
+        }
+
+        private void ContentsCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            CanvasMouseDown(sender as IInputElement, e);
+        }
+
+        private void ContentsCanvas_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            CanvasMouseUp(e);
+        }
         #endregion
     }
 
+    /// <summary>
+    /// ContentsArea内で選択矩形を表示するクラス
+    /// </summary>
     internal class AreaItemSelectOperator
     {
         private readonly Canvas _canvas;
@@ -529,6 +561,9 @@ namespace ObjectAreaLibrary
         }
     }
 
+    /// <summary>
+    /// ContentsArea内でContentsを操作するためのクラス
+    /// </summary>
     internal class AreaItemOperator
     {
         private readonly Canvas _canvas;
