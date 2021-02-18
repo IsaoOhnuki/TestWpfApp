@@ -208,7 +208,7 @@ namespace ObjectAreaLibrary
                 // TextSetterProperty > TextProperty
                 Mode = BindingMode.OneWay,
             };
-            BindingOperations.SetBinding(this, TextBox.TextProperty, textBinding);
+            BindingOperations.SetBinding(this, TextProperty, textBinding);
 
             Binding backgroundBinding = new Binding("BackgroundListener")
             {
@@ -216,7 +216,7 @@ namespace ObjectAreaLibrary
                 // BackgroundListenerProperty < BackgroundProperty
                 Mode = BindingMode.OneWayToSource,
             };
-            BindingOperations.SetBinding(this, Control.BackgroundProperty, backgroundBinding);
+            BindingOperations.SetBinding(this, BackgroundProperty, backgroundBinding);
         }
 
         public static readonly DependencyProperty BackgroundListenerProperty = DependencyProperty.Register(
@@ -240,18 +240,15 @@ namespace ObjectAreaLibrary
             typeof(string),
             typeof(MockAreaContents),
             new FrameworkPropertyMetadata(default(string)));
-        void SetTextSetter()
-        {
-            StringBuilder text = new StringBuilder();
-            text.AppendLine("Group = '" + Group?.ToString() + "'");
-            text.AppendLine("Select = " + Select.ToString());
-            SetValue(TextSetterProperty, text.ToString());
-        }
 
         public ContentsArea ParentArea { get => ContentsArea.GetItemParentArea(this); }
+
         public double Left { get => ContentsArea.GetItemLeft(this); set => ContentsArea.SetItemLeft(this, value); }
+
         public double Top { get => ContentsArea.GetItemTop(this); set => ContentsArea.SetItemTop(this, value); }
+
         public int ZIndex { get => ContentsArea.GetItemZIndex(this); set => ContentsArea.SetItemZIndex(this, value); }
+
         public string Group
         {
             get => ContentsArea.GetItemGroup(this);
@@ -270,6 +267,15 @@ namespace ObjectAreaLibrary
                 SetTextSetter();
             }
         }
+
+        void SetTextSetter()
+        {
+            StringBuilder text = new StringBuilder();
+            text.AppendLine("Group = '" + Group?.ToString() + "'");
+            text.AppendLine("Select = " + Select.ToString());
+            SetValue(TextSetterProperty, text.ToString());
+        }
+
         public Rect Bounds { get => ContentsArea.GetItemBounds(this); }
 
         public event Action<IAreaContents, bool> SelectChangedEvent;
