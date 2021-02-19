@@ -1,9 +1,9 @@
-﻿<UserControl x:Class="ObjectAreaLibrary.ContentsArea"
+﻿<UserControl x:Class="ContentsCanvas.ContentsArea"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:ObjectAreaLibrary"
+             xmlns:local="clr-namespace:ContentsCanvas"
              mc:Ignorable="d" 
              d:DesignWidth="200" d:DesignHeight="120">
     <Canvas x:Name="contentsCanvas"

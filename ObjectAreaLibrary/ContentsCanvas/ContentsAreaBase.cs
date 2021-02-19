@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace ObjectAreaLibrary
+namespace ContentsCanvas
 {
     using AreaItems = List<IAreaContents>;
     using AreaItemsContainer = Dictionary<string, List<IAreaContents>>;

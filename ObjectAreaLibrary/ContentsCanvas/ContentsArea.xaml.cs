@@ -7,7 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace ObjectAreaLibrary
+namespace ContentsCanvas
 {
     /// <summary>
     /// ContentsArea.xaml の相互作用ロジック

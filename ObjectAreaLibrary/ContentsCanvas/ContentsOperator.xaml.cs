@@ -1,8 +1,7 @@
-﻿using System;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 
-namespace ObjectAreaLibrary
+namespace ContentsCanvas
 {
     public enum HandleType
     {

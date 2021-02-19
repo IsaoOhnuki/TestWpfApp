@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 
-namespace ObjectAreaLibrary
+namespace ContentsCanvas
 {
     /// <summary>
     /// ContentsSelector.xaml の相互作用ロジック
