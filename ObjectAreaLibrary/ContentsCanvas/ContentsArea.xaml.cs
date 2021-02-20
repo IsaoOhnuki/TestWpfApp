@@ -72,18 +72,20 @@ namespace ContentsCanvas
         {
             Debug.Assert(areaItem is DependencyObject);
             (areaItem as DependencyObject).SetValue(Canvas.LeftProperty, value);
-        }
-
-        public static void SetItemTop(IAreaContents areaItem, double value)
-        {
-            Debug.Assert(areaItem is DependencyObject);
-            (areaItem as DependencyObject).SetValue(Canvas.TopProperty, value);
+            areaItem.OnLocationChanged(areaItem, new Point(value, areaItem.Top));
         }
 
         public static double GetItemTop(IAreaContents areaItem)
         {
             Debug.Assert(areaItem is DependencyObject);
             return (double)(areaItem as DependencyObject).GetValue(Canvas.TopProperty);
+        }
+
+        public static void SetItemTop(IAreaContents areaItem, double value)
+        {
+            Debug.Assert(areaItem is DependencyObject);
+            (areaItem as DependencyObject).SetValue(Canvas.TopProperty, value);
+            areaItem.OnLocationChanged(areaItem, new Point(areaItem.Left, value));
         }
 
         public static void SetItemZIndex(IAreaContents areaItem, int value)
@@ -272,6 +274,7 @@ namespace ContentsCanvas
 
         public event Action<IAreaContents, bool> SelectChangedEvent;
         public event Action<IAreaContents, string> GroupChangedEvent;
+        public event Action<IAreaContents, Point> LocationChangedEvent;
 
         public void OnGroupChanged(IAreaContents areaItem, string value)
         {
@@ -281,6 +284,11 @@ namespace ContentsCanvas
         public void OnSecteChanged(IAreaContents areaItem, bool value)
         {
             SelectChangedEvent?.Invoke(areaItem, value);
+        }
+
+        public void OnLocationChanged(IAreaContents areaItem, Point value)
+        {
+            LocationChangedEvent?.Invoke(areaItem, value);
         }
     }
 }

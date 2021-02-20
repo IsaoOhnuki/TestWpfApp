@@ -36,10 +36,13 @@ namespace ContentsCanvas
 
         event Action<IAreaContents, bool> SelectChangedEvent;
         event Action<IAreaContents, string> GroupChangedEvent;
+        event Action<IAreaContents, Point> LocationChangedEvent;
 
         void OnGroupChanged(IAreaContents areaItem, string value);
 
         void OnSecteChanged(IAreaContents areaItem, bool value);
+
+        void OnLocationChanged(IAreaContents areaItem, Point value);
     }
 
     /// <summary>

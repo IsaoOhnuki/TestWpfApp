@@ -6,7 +6,9 @@
              xmlns:local="clr-namespace:ObjectAreaLibrary"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Path 
-          Data="{Binding Path=ShortPath,
-                         RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:ShortPathLine}}}"/>
+
+    <Grid>
+        <Path x:Name="shortPathLine" Stroke="Yellow" StrokeThickness="3"/>
+    </Grid>
+
 </UserControl>
