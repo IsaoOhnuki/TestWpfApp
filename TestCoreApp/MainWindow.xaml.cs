@@ -45,7 +45,7 @@ namespace TestCoreApp
                 Background = new SolidColorBrush(Colors.Green),
                 BorderBrush = new SolidColorBrush(Colors.Black),
                 BorderThickness = new Thickness(2),
-                Left = 300,
+                Left = 400,
                 Top = 300,
                 Width = 200,
                 Height = 150,
@@ -85,7 +85,7 @@ namespace TestCoreApp
         {
             if (areaitem is MockAreaContents mock)
             {
-                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
+                //_shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
             }
         }
     }
