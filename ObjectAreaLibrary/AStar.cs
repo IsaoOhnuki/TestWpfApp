@@ -33,6 +33,8 @@ namespace ObjectAreaLibrary
 
     public class AStar
     {
+        private static log4net.ILog logger = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
         private int _astarNodeIndex;
@@ -111,6 +113,8 @@ namespace ObjectAreaLibrary
                     node.Backward = endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y;
                     node.Cost = node.Forward + node.Backward;
                     AddNode(node);
+
+                    logger.Info(node.NodePoint.Item2.ToString() + " : " + node.Forward.ToString() + " : " + node.Backward.ToString());
                 }
                 if (_gool.Contains(pos.Item2))
                 {

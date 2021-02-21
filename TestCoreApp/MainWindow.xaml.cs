@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using log4net;
 
 namespace TestCoreApp
 {
@@ -12,6 +13,9 @@ namespace TestCoreApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        //log4net.Config.XmlConfigurator.Configure(new System.IO.FileInfo("log4net.config"));
+        private static log4net.ILog logger = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
         MockAreaContents _item1;
         MockAreaContents _item2;
         MockAreaContents _item3;
@@ -19,6 +23,8 @@ namespace TestCoreApp
         public MainWindow()
         {
             InitializeComponent();
+
+            logger.Info("AStar");
 
             _item1 = new MockAreaContents()
             {
