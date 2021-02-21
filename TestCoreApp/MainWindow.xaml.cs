@@ -12,36 +12,27 @@ namespace TestCoreApp
     /// </summary>
     public partial class MainWindow : Window
     {
+        MockAreaContents _item1;
+        MockAreaContents _item2;
+        MockAreaContents _item3;
+
         public MainWindow()
         {
             InitializeComponent();
 
-            var item1 = new MockAreaContents()
+            _item1 = new MockAreaContents()
             {
-                Name = "item1",
                 Background = new SolidColorBrush(Colors.Red),
                 BorderBrush = new SolidColorBrush(Colors.Black),
                 BorderThickness = new Thickness(2),
-                Left = 500,
-                Top = 500,
-                Width = 200,
-                Height = 150,
-            };
-            var item2 = new MockAreaContents()
-            {
-                Name = "item2",
-                Background = new SolidColorBrush(Colors.Blue),
-                BorderBrush = new SolidColorBrush(Colors.Black),
-                BorderThickness = new Thickness(2),
                 Left = 100,
-                Top = 0,
+                Top = 100,
                 Width = 200,
                 Height = 150,
             };
-            var item3 = new MockAreaContents()
+            _item2 = new MockAreaContents()
             {
-                Name = "item3",
-                Background = new SolidColorBrush(Colors.Green),
+                Background = new SolidColorBrush(Colors.Blue),
                 BorderBrush = new SolidColorBrush(Colors.Black),
                 BorderThickness = new Thickness(2),
                 Left = 200,
@@ -49,18 +40,28 @@ namespace TestCoreApp
                 Width = 200,
                 Height = 150,
             };
-            contentsArea.Add(item1);
-            contentsArea.Add(item2);
-            contentsArea.Add(item3);
+            _item3 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 300,
+                Top = 300,
+                Width = 200,
+                Height = 150,
+            };
+            contentsArea.Add(_item1);
+            contentsArea.Add(_item2);
+            contentsArea.Add(_item3);
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            _shortPathLine.SetLine(new Point(item1.Left, item1.Top), new Point(item3.Left, item3.Top), new Point(-100, -100), new Point(1000, 1000));
+            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
 
-            item1.LocationChangedEvent += Item_LocationChanged;
-            item1.SizeChanged += Item_SizeChanged;
-            item3.LocationChangedEvent += Item_LocationChanged;
-            item3.SizeChanged += Item_SizeChanged;
+            _item1.LocationChangedEvent += Item_LocationChanged;
+            _item1.SizeChanged += Item_SizeChanged;
+            _item3.LocationChangedEvent += Item_LocationChanged;
+            _item3.SizeChanged += Item_SizeChanged;
         }
 
         ShortPathLine _shortPathLine;
@@ -84,14 +85,7 @@ namespace TestCoreApp
         {
             if (areaitem is MockAreaContents mock)
             {
-                if (mock.Name == "item1")
-                {
-
-                }
-                else if (mock.Name == "item3")
-                {
-
-                }
+                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
             }
         }
     }

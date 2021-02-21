@@ -54,35 +54,50 @@ namespace ObjectAreaLibrary
             return NodeCollection.Where(_ => _.Key == point).Select(_ => _.Value).FirstOrDefault();
         }
 
-        private IEnumerable<NodePoint> AdoptList()
+        private IEnumerable<NodePoint> AdoptList(NodePoint startPos)
         {
+            var diff = new Vector(startPos.X, startPos.Y);
             return NodeCollection
                 .Where(_ => _.Value.Adopt)
                 .OrderBy(_ => _.Value.Cost)
-                .Select(_ => _.Value.NodePoint.Item2);
+                .Select(_ => _.Value.NodePoint.Item2 - diff);
         }
 
         private NodeRect _gool;
         private static readonly int _step = 10;
 
-        public IEnumerable<NodePoint> Exec(NodePoint startPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public IEnumerable<NodePoint> Exec(NodePoint pos1, NodePoint pos2, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             _astarNodeIndex = 0;
             NodeCollection.Clear();
-            _gool = new NodeRect(endPos, new Size(1, 1));
-            _gool.Inflate(_step, _step);
 
-            var rect = new NodeRect(startPos, endPos);
-            rect.Inflate(_step, _step);
+            var astarrect = new NodeRect(pos1, pos2);
+            var astarBounds = NodeRect.Inflate(astarrect, _step, _step);
             var bounds = new NodeRect(minPos, maxPos);
-            ExecAStar(startPos, endPos, new VectorPos(VectorType.Left, startPos), bounds.TopLeft, bounds.BottomRight, obstacles
+
+            var startPos = astarrect.BottomRight;
+            var endPos = astarrect.TopLeft;
+
+            _gool = new NodeRect(endPos, new Size(1, 1));
+            _gool.Inflate(2, 2);
+
+            var firstNode = CreatAStarNode();
+            firstNode.NodePoint = new VectorPos(VectorType.Left, startPos);
+            firstNode.Forward = heuristic(endPos - startPos);
+            firstNode.Backward = 0;
+            firstNode.Cost = firstNode.Forward + firstNode.Backward;
+
+            AddNode(firstNode);
+
+            firstNode.Adopt = ExecAStar(startPos, endPos, firstNode.NodePoint, bounds.TopLeft, bounds.BottomRight, obstacles
                 .Where(_ =>
                 {
-                    var diff = NodeRect.Intersect(_, rect);
+                    var diff = NodeRect.Intersect(_, astarBounds);
                     return diff.Width > 0 || diff.Height > 0;
                 }),
                 viewpoint, heuristic);
-            return AdoptList();
+
+            return AdoptList(astarrect.TopLeft);
         }
 
         private bool ExecAStar(NodePoint startPos, NodePoint endPos, VectorPos vPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)

@@ -64,11 +64,11 @@ namespace ObjectAreaLibrary
 
             Left = bounds.Left;
             Top = bounds.Top;
-            Width = bounds.Width;
-            Height = bounds.Height;
+            Width = bounds.Width + 1;
+            Height = bounds.Height + 1;
 
             AStar astar = new AStar();
-            var linePos = astar.Exec(startPos, endPos, minPos, maxPos, new List<Rect>(), AStar.Viewpoint, AStar.Heuristic);
+            var linePos = astar.Exec(bounds.TopLeft, bounds.BottomRight, minPos, maxPos, new List<Rect>(), AStar.Viewpoint, AStar.Heuristic);
 
             PathFigure figure = new PathFigure();
             var firstPos = linePos.FirstOrDefault();
