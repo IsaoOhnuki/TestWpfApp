@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using log4net;
+using System.Collections.Generic;
 
 namespace TestCoreApp
 {
@@ -60,9 +61,12 @@ namespace TestCoreApp
             contentsArea.Add(_item2);
             contentsArea.Add(_item3);
 
+            var rects = new List<Rect>();
+            rects.Add(_item2.Bounds);
+
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
+            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000), rects);
 
             _item1.LocationChangedEvent += Item_LocationChanged;
             _item1.SizeChanged += Item_SizeChanged;
@@ -91,7 +95,10 @@ namespace TestCoreApp
         {
             if (areaitem is MockAreaContents mock)
             {
-                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000));
+                var rects = new List<Rect>();
+                rects.Add(_item2.Bounds);
+
+                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000), rects);
             }
         }
     }

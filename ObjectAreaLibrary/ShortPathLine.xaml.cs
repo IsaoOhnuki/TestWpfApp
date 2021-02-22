@@ -58,7 +58,7 @@ namespace ObjectAreaLibrary
             set { SetValue(Canvas.TopProperty, value); }
         }
 
-        public void SetLine(Point startPos, Point endPos, Point minPos, Point maxPos)
+        public void SetLine(Point startPos, Point endPos, Point minPos, Point maxPos, IEnumerable<Rect> obstacles)
         {
             var bounds = new Rect(startPos, endPos);
 
@@ -68,7 +68,7 @@ namespace ObjectAreaLibrary
             Width = bounds.Width + diff + diff;
             Height = bounds.Height + diff + diff;
 
-            var linePos = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, new List<Rect>(), AStar.Viewpoint, AStar.Heuristic);
+            var linePos = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, obstacles, AStar.Viewpoint, AStar.Heuristic);
 
             var lineData = new PathGeometry();
             if (linePos.Count() > 0)
