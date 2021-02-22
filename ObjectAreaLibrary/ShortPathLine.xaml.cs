@@ -68,25 +68,27 @@ namespace ObjectAreaLibrary
             Width = bounds.Width + diff + diff;
             Height = bounds.Height + diff + diff;
 
-            var linePos = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, obstacles, AStar.Viewpoint, AStar.Heuristic);
-
-            var lineData = new PathGeometry();
-            if (linePos.Count() > 0)
+            var result = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            if (result)
             {
+                var linePos = AStar.Instance.AdoptList(new Vector(bounds.Left - diff, bounds.Top - diff));
+
                 PathFigure figure = new PathFigure();
                 var firstPos = linePos.FirstOrDefault();
                 if (firstPos != null)
                 {
-                    figure.StartPoint = firstPos + new Vector(-bounds.Left + diff, -bounds.Top + diff);
+                    figure.StartPoint = firstPos;
                     foreach (var pos in linePos)
                     {
-                        figure.Segments.Add(new LineSegment() { Point = pos + new Vector(-bounds.Left + diff, -bounds.Top + diff) });
+                        figure.Segments.Add(new LineSegment() { Point = pos });
                     }
                     figure.Segments.RemoveAt(0);
                 }
+
+                var lineData = new PathGeometry();
                 lineData.Figures.Add(figure);
+                ShortPathSetter = lineData;
             }
-            ShortPathSetter = lineData;
         }
     }
 }

@@ -56,18 +56,18 @@ namespace ObjectAreaLibrary
             return NodeCollection.Where(_ => _.Key == point).Select(_ => _.Value).FirstOrDefault();
         }
 
-        private IEnumerable<NodePoint> AdoptList()
+        public IEnumerable<NodePoint> AdoptList(Vector diff)
         {
             return NodeCollection
                 .Where(_ => _.Value.Adopt)
                 .OrderBy(_ => _.Value.Cost)
-                .Select(_ => _.Value.NodePoint.Item2);
+                .Select(_ => _.Value.NodePoint.Item2 - diff);
         }
 
         private NodeRect _gool;
         private static readonly int _step = 10;
 
-        public IEnumerable<NodePoint> Exec(NodePoint startPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             NodeCollection.Clear();
             _gool = new NodeRect(endPos, new Size(1, 1));
@@ -83,15 +83,13 @@ namespace ObjectAreaLibrary
             firstNode.Cost = firstNode.Forward + firstNode.Backward;
             AddNode(firstNode);
 
-            ExecAStar(firstNode, endPos, bounds.TopLeft, bounds.BottomRight, _step, obstacles
+            return ExecAStar(firstNode, endPos, bounds.TopLeft, bounds.BottomRight, _step, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
                     return diff.Width > 0 || diff.Height > 0;
                 }),
                 viewpoint, heuristic);
-
-            return AdoptList();
         }
 
         private bool ExecAStar(AStarNode node, NodePoint endPos, NodePoint minPos, NodePoint maxPos, int step, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
@@ -104,10 +102,11 @@ namespace ObjectAreaLibrary
             }
 
             var viewpoints = viewpoint(node.NodePoint, minPos, maxPos, step, obstacles);
-            var newNodes = new List<(AStarNode, bool)>();
+            var newNodes = new List<(AStarNode, bool, bool)>();
             foreach (var pos in viewpoints)
             {
                 var newNode = NodeAt(pos.Item2);
+                var responsibility = false;
                 if (newNode == null)
                 {
                     newNode = CreatAStarNode();
@@ -115,12 +114,14 @@ namespace ObjectAreaLibrary
                     newNode.Forward = heuristic(endPos - pos.Item2);
                     newNode.Backward = Math.Abs(endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y);
                     newNode.Cost = newNode.Forward + newNode.Backward;
+                    responsibility = true;
                 }
 
                 var possibility = NodeCollection
                     .Where(_ => !_.Value.Inspected)
                     .All(_ => newNode.Cost < _.Value.Cost || (newNode.Cost == _.Value.Cost && newNode.Backward > _.Value.Backward));
-                newNodes.Add((newNode, possibility));
+
+                newNodes.Add((newNode, possibility, responsibility));
             }
 
             foreach (var newNode in newNodes)
