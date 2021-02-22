@@ -56,13 +56,12 @@ namespace ObjectAreaLibrary
             return NodeCollection.Where(_ => _.Key == point).Select(_ => _.Value).FirstOrDefault();
         }
 
-        private IEnumerable<NodePoint> AdoptList(NodePoint startPos)
+        private IEnumerable<NodePoint> AdoptList()
         {
-            var diff = new Vector(startPos.X, startPos.Y);
             return NodeCollection
                 .Where(_ => _.Value.Adopt)
                 .OrderBy(_ => _.Value.Cost)
-                .Select(_ => _.Value.NodePoint.Item2 - diff);
+                .Select(_ => _.Value.NodePoint.Item2);
         }
 
         private NodeRect _gool;
@@ -80,7 +79,7 @@ namespace ObjectAreaLibrary
             var firstNode = CreatAStarNode();
             firstNode.NodePoint = new VectorPos(VectorType.Left, startPos);
             firstNode.Forward = heuristic(endPos - startPos);
-            firstNode.Backward = endPos.X - startPos.X + endPos.Y - startPos.Y;
+            firstNode.Backward = Math.Abs(endPos.X - startPos.X + endPos.Y - startPos.Y);
             firstNode.Cost = firstNode.Forward + firstNode.Backward;
             AddNode(firstNode);
 
@@ -92,7 +91,7 @@ namespace ObjectAreaLibrary
                 }),
                 viewpoint, heuristic);
 
-            return AdoptList(startPos);
+            return AdoptList();
         }
 
         private bool ExecAStar(AStarNode node, NodePoint endPos, NodePoint minPos, NodePoint maxPos, int step, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
@@ -114,7 +113,7 @@ namespace ObjectAreaLibrary
                     newNode = CreatAStarNode();
                     newNode.NodePoint = pos;
                     newNode.Forward = heuristic(endPos - pos.Item2);
-                    newNode.Backward = endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y;
+                    newNode.Backward = Math.Abs(endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y);
                     newNode.Cost = newNode.Forward + newNode.Backward;
                 }
 

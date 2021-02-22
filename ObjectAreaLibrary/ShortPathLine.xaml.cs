@@ -77,10 +77,10 @@ namespace ObjectAreaLibrary
                 var firstPos = linePos.FirstOrDefault();
                 if (firstPos != null)
                 {
-                    figure.StartPoint = firstPos + new Vector(diff, diff);
+                    figure.StartPoint = firstPos + new Vector(-bounds.Left + diff, -bounds.Top + diff);
                     foreach (var pos in linePos)
                     {
-                        figure.Segments.Add(new LineSegment() { Point = pos + new Vector(diff, diff) });
+                        figure.Segments.Add(new LineSegment() { Point = pos + new Vector(-bounds.Left + diff, -bounds.Top + diff) });
                     }
                     figure.Segments.RemoveAt(0);
                 }
