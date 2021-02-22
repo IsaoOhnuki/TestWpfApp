@@ -33,22 +33,22 @@ namespace ObjectAreaLibrary
 
     public class AStar
     {
-        private static log4net.ILog logger = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private static AStar _instance;
+        public static AStar Instance { get => _instance ??= new AStar(); }
 
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
-        private int _astarNodeIndex;
         public AStarNode CreatAStarNode()
         {
-            return new AStarNode()
-            {
-                Index = ++_astarNodeIndex,
-            };
+            return new AStarNode();
         }
 
         private void AddNode(AStarNode node)
         {
-            NodeCollection.Add(node.NodePoint.Item2, node);
+            if (!NodeCollection.ContainsKey(node.NodePoint.Item2))
+            {
+                NodeCollection.Add(node.NodePoint.Item2, node);
+            }
         }
 
         private AStarNode NodeAt(NodePoint point)
@@ -70,25 +70,21 @@ namespace ObjectAreaLibrary
 
         public IEnumerable<NodePoint> Exec(NodePoint startPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
-            _astarNodeIndex = 0;
             NodeCollection.Clear();
+            _gool = new NodeRect(endPos, new Size(1, 1));
+            _gool.Inflate(2, 2);
 
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), _step, _step);
             var bounds = new NodeRect(minPos, maxPos);
-
-            _gool = new NodeRect(endPos, new Size(1, 1));
-            _gool.Inflate(2, 2);
 
             var firstNode = CreatAStarNode();
             firstNode.NodePoint = new VectorPos(VectorType.Left, startPos);
             firstNode.Forward = heuristic(endPos - startPos);
             firstNode.Backward = endPos.X - startPos.X + endPos.Y - startPos.Y;
             firstNode.Cost = firstNode.Forward + firstNode.Backward;
-            firstNode.Inspected = true;
-
             AddNode(firstNode);
 
-            firstNode.Adopt = ExecAStar(firstNode.NodePoint, endPos, bounds.TopLeft, bounds.BottomRight, obstacles
+            ExecAStar(firstNode, endPos, bounds.TopLeft, bounds.BottomRight, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -99,43 +95,55 @@ namespace ObjectAreaLibrary
             return AdoptList(startPos);
         }
 
-        private bool ExecAStar(VectorPos vPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        private bool ExecAStar(AStarNode node, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
-            var viewpoints = viewpoint(vPos, minPos, maxPos, obstacles);
-            foreach (var pos in viewpoints)
+            node.Inspected = true;
+            if (_gool.Contains(node.NodePoint.Item2))
             {
-                var node = NodeAt(pos.Item2);
-                if (node == null)
-                {
-                    node = CreatAStarNode();
-                    node.NodePoint = pos;
-                    node.Forward = heuristic(endPos - pos.Item2);
-                    node.Backward = endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y;
-                    node.Cost = node.Forward + node.Backward;
-                    AddNode(node);
-
-                    logger.Info(node.NodePoint.Item2.ToString() + " : " + node.Forward.ToString() + " : " + node.Backward.ToString());
-                }
-                if (_gool.Contains(pos.Item2))
-                {
-                    node.Adopt = true;
-                    return true;
-                }
+                node.Adopt = true;
+                return true;
             }
 
-            foreach (var node in NodeCollection.Where(_ => !_.Value.Inspected).OrderByDescending(_ => _.Value.Cost).ThenBy(_ => _.Value.Backward))
+            var viewpoints = viewpoint(node.NodePoint, minPos, maxPos, obstacles);
+            var newNodes = new List<(AStarNode, bool)>();
+            foreach (var pos in viewpoints)
             {
-                if (!node.Value.Inspected)
+                var newNode = NodeAt(pos.Item2);
+                if (newNode == null)
                 {
-                    node.Value.Inspected = true;
-                    if (ExecAStar(node.Value.NodePoint, endPos, minPos, maxPos, obstacles, viewpoint, heuristic))
+                    newNode = CreatAStarNode();
+                    newNode.NodePoint = pos;
+                    newNode.Forward = heuristic(endPos - pos.Item2);
+                    newNode.Backward = endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y;
+                    newNode.Cost = newNode.Forward + newNode.Backward;
+                }
+
+                var possibility = NodeCollection
+                    .Where(_ => !_.Value.Inspected)
+                    .All(_ => newNode.Cost < _.Value.Cost || (newNode.Cost == _.Value.Cost && newNode.Backward > _.Value.Backward));
+                newNodes.Add((newNode, possibility));
+            }
+
+            foreach (var newNode in newNodes)
+            {
+                AddNode(newNode.Item1);
+            }
+
+            var result = false;
+            foreach (var newNode in newNodes.OrderBy(_ => _.Item1.Cost).ThenByDescending(_ => _.Item1.Backward))
+            {
+                if (!newNode.Item1.Inspected && newNode.Item2)
+                {
+                    result = ExecAStar(newNode.Item1, endPos, minPos, maxPos, obstacles, viewpoint, heuristic);
+                    if (result)
                     {
-                        node.Value.Adopt = true;
-                        return true;
+                        node.Adopt = true;
+                        break;
                     }
                 }
             }
-            return false;
+
+            return result;
         }
 
         public static double Heuristic(Vector point)
@@ -145,11 +153,12 @@ namespace ObjectAreaLibrary
 
         public static IEnumerable<VectorPos> Viewpoint(VectorPos vPos, NodePoint minPoint, NodePoint maxPoint, IEnumerable<NodeRect> rects)
         {
+            var rectContains = rects.Count() > 0;
             NodePoint? leftPos = null;
             if (vPos.Item2.X + _step <= maxPoint.X)
             {
                 var pos = new NodePoint(vPos.Item2.X + _step, vPos.Item2.Y);
-                if (rects.All(_ => !_.Contains(pos)))
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
                     leftPos = pos;
                 }
@@ -158,7 +167,7 @@ namespace ObjectAreaLibrary
             if (vPos.Item2.Y + _step <= maxPoint.Y)
             {
                 var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y + _step);
-                if (rects.All(_ => !_.Contains(pos)))
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
                     topPos = pos;
                 }
@@ -167,7 +176,7 @@ namespace ObjectAreaLibrary
             if (vPos.Item2.X - _step >= minPoint.X)
             {
                 var pos = new NodePoint(vPos.Item2.X - _step, vPos.Item2.Y);
-                if (rects.All(_ => !_.Contains(pos)))
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
                     rightPos = pos;
                 }
@@ -176,65 +185,64 @@ namespace ObjectAreaLibrary
             if (vPos.Item2.Y - _step >= minPoint.Y)
             {
                 var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y - _step);
-                if (rects.All(_ => !_.Contains(pos)))
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
                     bottomPos = pos;
                 }
             }
 
             List<VectorPos> ret = new List<VectorPos>();
-            if (leftPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            if (topPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            if (rightPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            if (bottomPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-
-            //switch (vPos.Item1)
-            //{
-            //    case VectorType.Left:
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        break;
-            //    case VectorType.Right:
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        break;
-            //    case VectorType.Top:
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        break;
-            //    case VectorType.Bottom:
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        break;
-            //}
+            //if (leftPos.HasValue)
+            //    ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
+            //if (topPos.HasValue)
+            //    ret.Add(new VectorPos(VectorType.Top, topPos.Value));
+            //if (rightPos.HasValue)
+            //    ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
+            //if (bottomPos.HasValue)
+            //    ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
+            switch (vPos.Item1)
+            {
+                case VectorType.Left:
+                    if (leftPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
+                    if (topPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Top, topPos.Value));
+                    if (bottomPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
+                    if (rightPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
+                    break;
+                case VectorType.Right:
+                    if (rightPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
+                    if (topPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Top, topPos.Value));
+                    if (bottomPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
+                    if (leftPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
+                    break;
+                case VectorType.Top:
+                    if (topPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Top, topPos.Value));
+                    if (leftPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
+                    if (rightPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
+                    if (bottomPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
+                    break;
+                case VectorType.Bottom:
+                    if (bottomPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
+                    if (leftPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
+                    if (rightPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
+                    if (topPos.HasValue)
+                        ret.Add(new VectorPos(VectorType.Top, topPos.Value));
+                    break;
+            }
 
             return ret;
         }

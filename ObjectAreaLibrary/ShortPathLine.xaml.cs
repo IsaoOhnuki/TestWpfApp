@@ -62,28 +62,30 @@ namespace ObjectAreaLibrary
         {
             var bounds = new Rect(startPos, endPos);
 
-            Left = bounds.Left;
-            Top = bounds.Top;
-            Width = bounds.Width + 1;
-            Height = bounds.Height + 1;
+            double diff = shortPathLine.StrokeThickness;
+            Left = bounds.Left - diff;
+            Top = bounds.Top - diff;
+            Width = bounds.Width + diff + diff;
+            Height = bounds.Height + diff + diff;
 
-            AStar astar = new AStar();
-            var linePos = astar.Exec(startPos, endPos, minPos, maxPos, new List<Rect>(), AStar.Viewpoint, AStar.Heuristic);
-
-            PathFigure figure = new PathFigure();
-            var firstPos = linePos.FirstOrDefault();
-            if (firstPos != null)
-            {
-                figure.StartPoint = firstPos;
-                foreach (var pos in linePos)
-                {
-                    figure.Segments.Add(new LineSegment() { Point = pos });
-                }
-                figure.Segments.RemoveAt(0);
-            }
+            var linePos = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, new List<Rect>(), AStar.Viewpoint, AStar.Heuristic);
 
             var lineData = new PathGeometry();
-            lineData.Figures.Add(figure);
+            if (linePos.Count() > 0)
+            {
+                PathFigure figure = new PathFigure();
+                var firstPos = linePos.FirstOrDefault();
+                if (firstPos != null)
+                {
+                    figure.StartPoint = firstPos + new Vector(diff, diff);
+                    foreach (var pos in linePos)
+                    {
+                        figure.Segments.Add(new LineSegment() { Point = pos + new Vector(diff, diff) });
+                    }
+                    figure.Segments.RemoveAt(0);
+                }
+                lineData.Figures.Add(figure);
+            }
             ShortPathSetter = lineData;
         }
     }
