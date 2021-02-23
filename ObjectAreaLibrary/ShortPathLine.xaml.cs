@@ -58,37 +58,41 @@ namespace ObjectAreaLibrary
             set { SetValue(Canvas.TopProperty, value); }
         }
 
-        public void SetLine(Point startPos, Point endPos, Point minPos, Point maxPos, IEnumerable<Rect> obstacles)
+        public void SetLine(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
         {
-            var bounds = new Rect(startPos, endPos);
-
             double diff = shortPathLine.StrokeThickness;
+            var bounds = new Rect(startPos, endPos);
+            var lineData = new PathGeometry();
+            var result = AStar.Instance.Exec(startPos, endPos, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            if (result)
+            {
+                var linePos = AStar.Instance.AdoptList();
+                if (linePos.Count() > 0)
+                {
+                    bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
+
+                    PathFigure figure = new PathFigure();
+                    var firstPos = linePos.FirstOrDefault();
+                    if (firstPos != null)
+                    {
+                        var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
+                        figure.StartPoint = firstPos - diffPos;
+                        foreach (var pos in linePos)
+                        {
+                            figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
+                        }
+                        figure.Segments.RemoveAt(0);
+                    }
+
+                    lineData.Figures.Add(figure);
+                }
+            }
+            ShortPathSetter = lineData;
+
             Left = bounds.Left - diff;
             Top = bounds.Top - diff;
             Width = bounds.Width + diff + diff;
             Height = bounds.Height + diff + diff;
-
-            var result = AStar.Instance.Exec(startPos, endPos, minPos, maxPos, obstacles, AStar.Viewpoint, AStar.Heuristic);
-            if (result)
-            {
-                var linePos = AStar.Instance.AdoptList(new Vector(bounds.Left - diff, bounds.Top - diff));
-
-                PathFigure figure = new PathFigure();
-                var firstPos = linePos.FirstOrDefault();
-                if (firstPos != null)
-                {
-                    figure.StartPoint = firstPos;
-                    foreach (var pos in linePos)
-                    {
-                        figure.Segments.Add(new LineSegment() { Point = pos });
-                    }
-                    figure.Segments.RemoveAt(0);
-                }
-
-                var lineData = new PathGeometry();
-                lineData.Figures.Add(figure);
-                ShortPathSetter = lineData;
-            }
         }
     }
 }

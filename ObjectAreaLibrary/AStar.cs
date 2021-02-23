@@ -8,7 +8,7 @@ namespace ObjectAreaLibrary
     using NodePoint = Point;
     using NodeRect = Rect;
     using VectorPos = Tuple<VectorType, Point>;
-    using Viewpoint = Func<Tuple<VectorType, Point>, Point, Point, int, IEnumerable<Rect>, IEnumerable<Tuple<VectorType, Point>>>;
+    using Viewpoint = Func<Tuple<VectorType, Point>, int, Rect, IEnumerable<Rect>, IEnumerable<Tuple<VectorType, Point>>>;
     using Heuristic = Func<Vector, double>;
 
     public enum VectorType
@@ -38,9 +38,26 @@ namespace ObjectAreaLibrary
 
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
+        private int _astarNodeIndex;
         public AStarNode CreatAStarNode()
         {
-            return new AStarNode();
+            return new AStarNode()
+            {
+                Index = ++_astarNodeIndex,
+            };
+        }
+
+        public AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, bool adopt = false)
+        {
+            return new AStarNode()
+            {
+                Index = ++_astarNodeIndex,
+                NodePoint = vectorPos,
+                Forward = forward,
+                Backward = backward,
+                Cost = forward + backward,
+                Adopt = adopt,
+            };
         }
 
         private void AddNode(AStarNode node)
@@ -56,34 +73,30 @@ namespace ObjectAreaLibrary
             return NodeCollection.Where(_ => _.Key == point).Select(_ => _.Value).FirstOrDefault();
         }
 
-        public IEnumerable<NodePoint> AdoptList(Vector diff)
+        public IEnumerable<NodePoint> AdoptList()
         {
             return NodeCollection
                 .Where(_ => _.Value.Adopt)
-                .OrderBy(_ => _.Value.Cost)
-                .Select(_ => _.Value.NodePoint.Item2 - diff);
+                .OrderBy(_ => _.Value.Index)
+                .Select(_ => _.Value.NodePoint.Item2);
         }
 
         private NodeRect _gool;
         private static readonly int _step = 10;
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, NodePoint minPos, NodePoint maxPos, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             NodeCollection.Clear();
+            _astarNodeIndex = 0;
             _gool = new NodeRect(endPos, new Size(1, 1));
-            _gool.Inflate(12, 12);
+            _gool.Inflate(_step, _step);
 
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), _step, _step);
-            var bounds = new NodeRect(minPos, maxPos);
 
-            var firstNode = CreatAStarNode();
-            firstNode.NodePoint = new VectorPos(VectorType.Left, startPos);
-            firstNode.Forward = heuristic(endPos - startPos);
-            firstNode.Backward = Math.Abs(endPos.X - startPos.X + endPos.Y - startPos.Y);
-            firstNode.Cost = firstNode.Forward + firstNode.Backward;
+            var firstNode = CreatAStarNode(new VectorPos(VectorType.Left, startPos), heuristic(endPos - startPos), Math.Abs(endPos.X - startPos.X + endPos.Y - startPos.Y));
             AddNode(firstNode);
 
-            return ExecAStar(firstNode, endPos, bounds.TopLeft, bounds.BottomRight, _step, obstacles
+            return ExecAStar(firstNode, endPos, _step, limitRect, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -92,16 +105,26 @@ namespace ObjectAreaLibrary
                 viewpoint, heuristic);
         }
 
-        private bool ExecAStar(AStarNode node, NodePoint endPos, NodePoint minPos, NodePoint maxPos, int step, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             node.Inspected = true;
             if (_gool.Contains(node.NodePoint.Item2))
             {
+                var residue = endPos - node.NodePoint.Item2;
+                if (residue.X < residue.Y)
+                {
+                    AddNode(CreatAStarNode(new VectorPos(node.NodePoint.Item1, new NodePoint(endPos.X, node.NodePoint.Item2.Y)), 0, 0, true));
+                }
+                else
+                {
+                    AddNode(CreatAStarNode(new VectorPos(node.NodePoint.Item1, new NodePoint(node.NodePoint.Item2.X, endPos.Y)), 0, 0, true));
+                }
+                AddNode(CreatAStarNode(new VectorPos(node.NodePoint.Item1, endPos), 0, 0, true));
                 node.Adopt = true;
                 return true;
             }
 
-            var viewpoints = viewpoint(node.NodePoint, minPos, maxPos, step, obstacles);
+            var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
             var newNodes = new List<(AStarNode, bool, bool)>();
             foreach (var pos in viewpoints)
             {
@@ -109,11 +132,7 @@ namespace ObjectAreaLibrary
                 var responsibility = false;
                 if (newNode == null)
                 {
-                    newNode = CreatAStarNode();
-                    newNode.NodePoint = pos;
-                    newNode.Forward = heuristic(endPos - pos.Item2);
-                    newNode.Backward = Math.Abs(endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y);
-                    newNode.Cost = newNode.Forward + newNode.Backward;
+                    newNode = CreatAStarNode(pos, heuristic(endPos - pos.Item2), Math.Abs(endPos.X - pos.Item2.X + endPos.Y - pos.Item2.Y));
                     responsibility = true;
                 }
 
@@ -132,7 +151,7 @@ namespace ObjectAreaLibrary
             var result = false;
             foreach (var newNode in newNodes.Where(_ => !_.Item1.Inspected && _.Item2).OrderBy(_ => _.Item1.Cost).ThenByDescending(_ => _.Item1.Backward))
             {
-                result = ExecAStar(newNode.Item1, endPos, minPos, maxPos, step, obstacles, viewpoint, heuristic);
+                result = ExecAStar(newNode.Item1, endPos, step, limitRect, obstacles, viewpoint, heuristic);
                 if (result)
                 {
                     node.Adopt = true;
@@ -148,11 +167,12 @@ namespace ObjectAreaLibrary
             return Math.Sqrt(point.X * point.X + point.Y * point.Y);
         }
 
-        public static IEnumerable<VectorPos> Viewpoint(VectorPos vPos, NodePoint minPoint, NodePoint maxPoint, int step, IEnumerable<NodeRect> rects)
+        public static IEnumerable<VectorPos> Viewpoint(VectorPos vPos, int step, NodeRect limitRect, IEnumerable<NodeRect> rects)
         {
+            bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
             var rectContains = rects.Count() > 0;
             NodePoint? leftPos = null;
-            if (vPos.Item2.X + step <= maxPoint.X)
+            if (noLimmit || vPos.Item2.X + step <= limitRect.BottomRight.X)
             {
                 var pos = new NodePoint(vPos.Item2.X + step, vPos.Item2.Y);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
@@ -161,7 +181,7 @@ namespace ObjectAreaLibrary
                 }
             }
             NodePoint? topPos = null;
-            if (vPos.Item2.Y + step <= maxPoint.Y)
+            if (noLimmit || vPos.Item2.Y + step <= limitRect.BottomRight.Y)
             {
                 var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y + step);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
@@ -170,7 +190,7 @@ namespace ObjectAreaLibrary
                 }
             }
             NodePoint? rightPos = null;
-            if (vPos.Item2.X - step >= minPoint.X)
+            if (noLimmit || vPos.Item2.X - step >= limitRect.TopLeft.X)
             {
                 var pos = new NodePoint(vPos.Item2.X - step, vPos.Item2.Y);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
@@ -179,7 +199,7 @@ namespace ObjectAreaLibrary
                 }
             }
             NodePoint? bottomPos = null;
-            if (vPos.Item2.Y - step >= minPoint.Y)
+            if (noLimmit || vPos.Item2.Y - step >= limitRect.TopLeft.Y)
             {
                 var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y - step);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))

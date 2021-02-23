@@ -66,7 +66,7 @@ namespace TestCoreApp
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000), rects);
+            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
 
             _item1.LocationChangedEvent += Item_LocationChanged;
             _item1.SizeChanged += Item_SizeChanged;
@@ -98,7 +98,7 @@ namespace TestCoreApp
                 var rects = new List<Rect>();
                 rects.Add(_item2.Bounds);
 
-                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Point(0, 0), new Point(1000, 1000), rects);
+                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
             }
         }
     }
