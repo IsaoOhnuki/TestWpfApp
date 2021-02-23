@@ -42,7 +42,7 @@ namespace ObjectAreaLibrary
         public static int Step { get; set; } = 10;
 
         private int _astarNodeIndex;
-        public AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
+        private AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
         {
             if (clear)
             {
