@@ -119,13 +119,12 @@ namespace ObjectAreaLibrary
                 }
 
                 var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
-                foreach (var pos in viewpoints)
+                foreach (var viewPpos in viewpoints)
                 {
-                    var viewPpos = pos;
                     var newNode = NodeAt(viewPpos);
                     if (newNode == null)
                     {
-                        AddNodes(CreatAStarNode(pos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)), parent: node));
+                        AddNodes(CreatAStarNode(viewPpos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)), parent: node));
                     }
                 }
 
