@@ -29,6 +29,7 @@ namespace ObjectAreaLibrary
         public bool Inspected;
         public bool Adopt;
         public int Index;
+        public AStarNode Parent;
     }
 
     public class AStar
@@ -39,7 +40,7 @@ namespace ObjectAreaLibrary
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
         private int _astarNodeIndex;
-        public AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, bool adopt = false, bool clear = false)
+        public AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
         {
             if (clear)
             {
@@ -53,6 +54,7 @@ namespace ObjectAreaLibrary
                 Backward = backward,
                 Cost = forward + backward,
                 Adopt = adopt,
+                Parent = parent,
             };
         }
 
@@ -82,7 +84,7 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint.Item2);
         }
 
-        private static readonly int _step = 50;
+        private static readonly int _step = 10;
         public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
@@ -100,6 +102,46 @@ namespace ObjectAreaLibrary
                     return diff.Width > 0 || diff.Height > 0;
                 }),
                 viewpoint, heuristic);
+        }
+
+        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        {
+            if (obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
+            {
+                return false;
+            }
+
+            var result = false;
+            while (node != null && !result)
+            {
+                node.Inspected = true;
+                if (CheckGoal(node, endPos))
+                {
+                    node.Adopt = true;
+                    while (node.Parent != null)
+                    {
+                        node = node.Parent;
+                        node.Adopt = true;
+                    }
+                    result = true;
+                    break;
+                }
+
+                var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
+                foreach (var pos in viewpoints)
+                {
+                    var viewPpos = pos.Item2;
+                    var newNode = NodeAt(viewPpos);
+                    if (newNode == null)
+                    {
+                        AddNodes(CreatAStarNode(pos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)), parent: node));
+                    }
+                }
+
+                node = NodeCollection.Select(_ => _.Value).Where(_ => !_.Inspected).OrderBy(_ => _.Cost).ThenByDescending(_ => _.Backward).FirstOrDefault();
+            }
+
+            return result;
         }
 
         private NodeRect _goal;
@@ -130,63 +172,12 @@ namespace ObjectAreaLibrary
             return result;
         }
 
-        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
-        {
-            node.Inspected = true;
-            if (CheckGoal(node, endPos))
-            {
-                node.Adopt = true;
-                return true;
-            }
-
-            var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
-            var newNodes = new List<(AStarNode, bool, bool)>();
-            foreach (var pos in viewpoints)
-            {
-                var viewPpos = pos.Item2;
-                var newNode = NodeAt(viewPpos);
-                var responsibility = false;
-                if (newNode == null)
-                {
-                    newNode = CreatAStarNode(pos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)));
-                    responsibility = true;
-                }
-
-                var possibility = NodeCollection
-                    .Where(_ => !_.Value.Inspected)
-                    .All(_ => newNode.Cost < _.Value.Cost || (newNode.Cost == _.Value.Cost && newNode.Backward > _.Value.Backward));
-
-                newNodes.Add((newNode, possibility, responsibility));
-            }
-
-            foreach (var newNode in newNodes)
-            {
-                AddNodes(newNode.Item1);
-            }
-
-            var result = false;
-            foreach (var newNode in newNodes.Where(_ => !_.Item1.Inspected && _.Item2).OrderBy(_ => _.Item1.Cost).ThenByDescending(_ => _.Item1.Backward))
-            {
-                if (!newNode.Item1.Inspected)
-                {
-                    result = ExecAStar(newNode.Item1, endPos, step, limitRect, obstacles, viewpoint, heuristic);
-                    if (result)
-                    {
-                        node.Adopt = true;
-                        break;
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        private static double GetForward(NodePoint startPos, NodePoint endPos)
+        private double GetForward(NodePoint startPos, NodePoint endPos)
         {
             return (startPos.X - endPos.X) + (startPos.Y - endPos.Y);
         }
 
-        private static double GetBackward(NodePoint startPos, NodePoint endPos)
+        private double GetBackward(NodePoint startPos, NodePoint endPos)
         {
             return (endPos.X - startPos.X) + (endPos.Y - startPos.Y);
         }
