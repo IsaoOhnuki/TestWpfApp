@@ -29,8 +29,10 @@ namespace ObjectAreaLibrary
 
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
+        public static int Step { get; set; } = 10;
+
         private int _astarNodeIndex;
-        public AStarNode CreatAStarNode(NodePoint point, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
+        private AStarNode CreatAStarNode(NodePoint point, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
         {
             if (clear)
             {
@@ -74,18 +76,17 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint);
         }
 
-        private static readonly int _step = 10;
         public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
-            SetGoal(endPos, _step);
+            SetGoal(endPos, Step);
 
-            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), _step, _step);
+            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), Step, Step);
 
             var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), Math.Abs(GetBackward(startPos, endPos)), clear: false);
             AddNodes(firstNode);
 
-            return ExecAStar(firstNode, endPos, _step, limitRect, obstacles
+            return ExecAStar(firstNode, endPos, Step, limitRect, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -152,7 +153,6 @@ namespace ObjectAreaLibrary
             var result = _goal.Contains(nodePos);
             if (result)
             {
-                var vctType = node.NodePoint;
                 var residue = endPos - nodePos;
                 if (Math.Abs(residue.X) < Math.Abs(residue.Y))
                 {
@@ -165,11 +165,6 @@ namespace ObjectAreaLibrary
                 AddNodes(CreatAStarNode(endPos, 0, 0, adopt: true));
             }
             return result;
-        }
-
-        private double GetForward(NodePoint startPos, NodePoint endPos)
-        {
-            return (startPos.X - endPos.X) + (startPos.Y - endPos.Y);
         }
 
         private double GetBackward(NodePoint startPos, NodePoint endPos)
