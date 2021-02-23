@@ -83,7 +83,7 @@ namespace ObjectAreaLibrary
 
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), Step, Step);
 
-            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), Math.Abs(GetBackward(startPos, endPos)), clear: false);
+            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), Math.Abs(GetBackward(startPos, endPos)), clear: true);
             AddNodes(firstNode);
 
             return ExecAStar(firstNode, endPos, Step, limitRect, obstacles
