@@ -8,7 +8,7 @@ namespace ObjectAreaLibrary
     using NodePoint = Point;
     using NodeRect = Rect;
     using VectorPos = Tuple<VectorType, Point>;
-    using Viewpoint = Func<Tuple<VectorType, Point>, int, Rect, IEnumerable<Rect>, IEnumerable<Tuple<VectorType, Point>>>;
+    using Viewpoint = Func<Point, int, Rect, IEnumerable<Rect>, IEnumerable<Tuple<VectorType, Point>>>;
     using Heuristic = Func<Point, Point, double>;
 
     public enum VectorType
@@ -86,17 +86,18 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint.Item2);
         }
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, bool inertia, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
             SetGoal(endPos, Step);
 
+            VectorType vector = GetFirstVector(startPos, endPos);
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), Step, Step);
 
-            var firstNode = CreatAStarNode(new VectorPos(VectorType.Left, startPos), heuristic(startPos, endPos), Math.Abs(GetBackward(startPos, endPos)), clear: true);
+            var firstNode = CreatAStarNode(new VectorPos(vector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos), clear: true);
             AddNodes(firstNode);
 
-            return ExecAStar(firstNode, endPos, Step, limitRect, obstacles
+            return ExecAStar(firstNode, endPos, Step, limitRect, inertia, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -105,7 +106,7 @@ namespace ObjectAreaLibrary
                 viewpoint, heuristic);
         }
 
-        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, bool inertia, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             if (obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
             {
@@ -128,14 +129,17 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
+                var viewpoints = viewpoint(node.NodePoint.Item2, step, limitRect, obstacles);
                 foreach (var pos in viewpoints)
                 {
-                    var viewPpos = pos.Item2;
-                    var newNode = NodeAt(viewPpos);
+                    var vector = pos.Item1;
+                    var viewPos = pos.Item2;
+                    var newNode = NodeAt(viewPos);
                     if (newNode == null)
                     {
-                        AddNodes(CreatAStarNode(pos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)), parent: node));
+                        var hVal = heuristic(viewPos, endPos);
+                        hVal -= inertia && node.NodePoint.Item1 == vector ? step : 0;
+                        AddNodes(CreatAStarNode(pos, hVal, GetBackward(viewPos, endPos), parent: node));
                     }
                 }
 
@@ -175,7 +179,8 @@ namespace ObjectAreaLibrary
 
         private double GetBackward(NodePoint startPos, NodePoint endPos)
         {
-            return (endPos.X - startPos.X) + (endPos.Y - startPos.Y);
+            return (startPos.X < endPos.X ? endPos.X - startPos.X : startPos.X - endPos.X)
+                + (startPos.Y < endPos.Y ? endPos.Y - startPos.Y : startPos.Y - endPos.Y);
         }
 
         public static double Heuristic(NodePoint startPos, NodePoint endPos)
@@ -184,99 +189,67 @@ namespace ObjectAreaLibrary
             return Math.Sqrt(point.X * point.X + point.Y * point.Y);
         }
 
-        public static IEnumerable<VectorPos> Viewpoint(VectorPos vPos, int step, NodeRect limitRect, IEnumerable<NodeRect> rects)
+        private VectorType GetFirstVector(NodePoint startPos, NodePoint endPos)
+        {
+            VectorType type;
+            Vector vector = endPos - startPos;
+            if (vector.X >= 0 && vector.Y >= 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.Left : VectorType.Top;
+            }
+            else if (vector.X < 0 && vector.Y >= 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.Right : VectorType.Top;
+            }
+            else if (vector.X >= 0 && vector.Y < 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.Left : VectorType.Bottom;
+            }
+            else //if(vector.X < 0 && vector.Y < 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.Right : VectorType.Bottom;
+            }
+
+            return type;
+        }
+
+        public static IEnumerable<VectorPos> Viewpoint(NodePoint vPos, int step, NodeRect limitRect, IEnumerable<NodeRect> rects)
         {
             bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
             var rectContains = rects.Count() > 0;
-            NodePoint? leftPos = null;
-            if (noLimmit || vPos.Item2.X + step <= limitRect.BottomRight.X)
-            {
-                var pos = new NodePoint(vPos.Item2.X + step, vPos.Item2.Y);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
-                {
-                    leftPos = pos;
-                }
-            }
-            NodePoint? topPos = null;
-            if (noLimmit || vPos.Item2.Y + step <= limitRect.BottomRight.Y)
-            {
-                var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y + step);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
-                {
-                    topPos = pos;
-                }
-            }
-            NodePoint? rightPos = null;
-            if (noLimmit || vPos.Item2.X - step >= limitRect.TopLeft.X)
-            {
-                var pos = new NodePoint(vPos.Item2.X - step, vPos.Item2.Y);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
-                {
-                    rightPos = pos;
-                }
-            }
-            NodePoint? bottomPos = null;
-            if (noLimmit || vPos.Item2.Y - step >= limitRect.TopLeft.Y)
-            {
-                var pos = new NodePoint(vPos.Item2.X, vPos.Item2.Y - step);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
-                {
-                    bottomPos = pos;
-                }
-            }
-
             List<VectorPos> ret = new List<VectorPos>();
-            if (leftPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            if (topPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            if (rightPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            if (bottomPos.HasValue)
-                ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //switch (vPos.Item1)
-            //{
-            //    case VectorType.Left:
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        break;
-            //    case VectorType.Right:
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        break;
-            //    case VectorType.Top:
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        break;
-            //    case VectorType.Bottom:
-            //        if (bottomPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Bottom, bottomPos.Value));
-            //        if (leftPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Left, leftPos.Value));
-            //        if (rightPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Right, rightPos.Value));
-            //        if (topPos.HasValue)
-            //            ret.Add(new VectorPos(VectorType.Top, topPos.Value));
-            //        break;
-            //}
+            if (noLimmit || vPos.X + step <= limitRect.BottomRight.X)
+            {
+                var pos = new NodePoint(vPos.X + step, vPos.Y);
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                {
+                    ret.Add(new VectorPos(VectorType.Left, pos));
+                }
+            }
+            if (noLimmit || vPos.Y + step <= limitRect.BottomRight.Y)
+            {
+                var pos = new NodePoint(vPos.X, vPos.Y + step);
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                {
+                    ret.Add(new VectorPos(VectorType.Top, pos));
+                }
+            }
+            if (noLimmit || vPos.X - step >= limitRect.TopLeft.X)
+            {
+                var pos = new NodePoint(vPos.X - step, vPos.Y);
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                {
+                    ret.Add(new VectorPos(VectorType.Right, pos));
+                }
+            }
+            if (noLimmit || vPos.Y - step >= limitRect.TopLeft.Y)
+            {
+                var pos = new NodePoint(vPos.X, vPos.Y - step);
+                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                {
+                    ret.Add(new VectorPos(VectorType.Bottom, pos));
+                }
+            }
 
             return ret;
         }
