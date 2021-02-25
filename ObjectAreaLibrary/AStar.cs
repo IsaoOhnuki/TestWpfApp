@@ -30,12 +30,8 @@ namespace ObjectAreaLibrary
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
         private int _astarNodeIndex;
-        private AStarNode CreatAStarNode(NodePoint point, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
+        private AStarNode CreatAStarNode(NodePoint point, double forward, double backward, AStarNode parent = null, bool adopt = false)
         {
-            if (clear)
-            {
-                _astarNodeIndex = 0;
-            }
             return new AStarNode()
             {
                 Index = ++_astarNodeIndex,
@@ -50,6 +46,7 @@ namespace ObjectAreaLibrary
 
         private void ClearNodes()
         {
+            _astarNodeIndex = 0;
             NodeCollection.Clear();
         }
 
@@ -81,7 +78,7 @@ namespace ObjectAreaLibrary
 
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
 
-            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), GetBackward(startPos, endPos), clear: true);
+            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), GetBackward(startPos, endPos));
             AddNodes(firstNode);
 
             return ExecAStar(firstNode, endPos, step, limitRect, obstacles
