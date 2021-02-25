@@ -119,7 +119,7 @@ namespace ObjectAreaLibrary
                     var newNode = NodeAt(viewPos);
                     if (newNode == null)
                     {
-                        AddNodes(CreatAStarNode(viewPos, heuristic(viewPos, endPos), Math.Abs(GetBackward(viewPos, endPos)), parent: node));
+                        AddNodes(CreatAStarNode(viewPos, heuristic(viewPos, endPos), GetBackward(viewPos, endPos), parent: node));
                     }
                 }
 
