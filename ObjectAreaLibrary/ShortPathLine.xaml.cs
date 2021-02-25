@@ -50,14 +50,13 @@ namespace ObjectAreaLibrary
             set { SetValue(Canvas.TopProperty, value); }
         }
 
-        public bool Inertia { get; set; }
-
         public void SetLine(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
         {
             double diff = shortPathLine.StrokeThickness;
+            double step = 10;
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
-            var result = AStar.Instance.Exec(startPos, endPos, limitRect, Inertia, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            var result = AStar.Instance.Exec(startPos, endPos, limitRect, step, obstacles, AStar.Viewpoint, AStar.Heuristic);
             if (result)
             {
                 var linePos = AStar.Instance.AdoptList();

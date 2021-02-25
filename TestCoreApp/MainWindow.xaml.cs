@@ -101,18 +101,5 @@ namespace TestCoreApp
                 _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
             }
         }
-
-        public static readonly DependencyProperty InertiaProperty = DependencyProperty.Register(
-            nameof(Inertia),
-            typeof(bool),
-            typeof(MainWindow),
-            new FrameworkPropertyMetadata(default(bool), (s, e) => {
-                if (s is MainWindow mw)
-                {
-                    mw._shortPathLine.Inertia = (bool)e.NewValue;
-                }
-            }));
-
-        public double Inertia { get => (double)GetValue(InertiaProperty); set => SetValue(InertiaProperty, value); }
     }
 }
