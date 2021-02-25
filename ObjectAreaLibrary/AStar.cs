@@ -40,12 +40,8 @@ namespace ObjectAreaLibrary
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
 
         private int _astarNodeIndex;
-        private AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
+        private AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false)
         {
-            if (clear)
-            {
-                _astarNodeIndex = 0;
-            }
             return new AStarNode()
             {
                 Index = ++_astarNodeIndex,
@@ -60,6 +56,7 @@ namespace ObjectAreaLibrary
 
         private void ClearNodes()
         {
+            _astarNodeIndex = 0;
             NodeCollection.Clear();
         }
 
@@ -84,18 +81,18 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint.Item2);
         }
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, double Step, double inertia, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, double step, double inertia, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
             SetGoal(endPos, step);
 
             VectorType vector = GetFirstVector(startPos, endPos);
-            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), Step, Step);
+            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
 
-            var firstNode = CreatAStarNode(new VectorPos(vector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos), clear: true);
+            var firstNode = CreatAStarNode(new VectorPos(vector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos));
             AddNodes(firstNode);
 
-            return ExecAStar(firstNode, endPos, Step, inertia, limitRect, obstacles
+            return ExecAStar(firstNode, endPos, step, inertia, limitRect, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -216,12 +213,12 @@ namespace ObjectAreaLibrary
             return type;
         }
 
-        public static IEnumerable<VectorPos> Viewpoint(NodePoint vPos, double step, NodeRect limitRect, IEnumerable<NodeRect> rects)
+        public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects)
         {
             bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
             var rectContains = rects.Count() > 0;
             List<VectorPos> ret = new List<VectorPos>();
-            if (noLimmit || vPos.X + step <= limitRect.BottomRight.X)
+            if (noLimmit || point.X + step <= limitRect.BottomRight.X)
             {
                 var pos = new NodePoint(point.X + step, point.Y);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
