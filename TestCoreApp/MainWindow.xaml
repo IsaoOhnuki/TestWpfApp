@@ -8,8 +8,23 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <ContentsCanvas:ContentsArea x:Name="contentsArea" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+        <ToolBar Grid.Row="0">
+            <CheckBox Content="Inertia" IsChecked="{Binding Path=Inertia, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:MainWindow}}}"/>
+            <TextBlock x:Name="tbcInertia"
+                       Width="70"
+                       Text="{Binding ElementName=sldInertia, Path=Value}"/>
+            <Slider x:Name="sldInertia"
+                    Minimum="0"
+                    Maximum="50"
+                    Width="300"
+                    Value="{Binding Path=InertiaValue, RelativeSource={RelativeSource AncestorType=local:MainWindow}}"/>
+        </ToolBar>
+        <ContentsCanvas:ContentsArea x:Name="contentsArea" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
 
     </Grid>
 </Window>

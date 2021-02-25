@@ -72,6 +72,8 @@ namespace TestCoreApp
             _item1.SizeChanged += Item_SizeChanged;
             _item3.LocationChangedEvent += Item_LocationChanged;
             _item3.SizeChanged += Item_SizeChanged;
+
+            InertiaValue = 10;
         }
 
         ShortPathLine _shortPathLine;
@@ -101,5 +103,31 @@ namespace TestCoreApp
                 _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
             }
         }
+
+        public static readonly DependencyProperty InertiaProperty = DependencyProperty.Register(
+            nameof(Inertia),
+            typeof(bool),
+            typeof(MainWindow),
+            new FrameworkPropertyMetadata(default(bool), (s, e) => {
+                if (s is MainWindow mw)
+                {
+                    mw._shortPathLine.Inertia = (bool)e.NewValue;
+                }
+            }));
+
+        public bool Inertia { get => (bool)GetValue(InertiaProperty); set => SetValue(InertiaProperty, value); }
+
+        public static readonly DependencyProperty InertiaValueProperty = DependencyProperty.Register(
+            nameof(InertiaValue),
+            typeof(double),
+            typeof(MainWindow),
+            new FrameworkPropertyMetadata(default(double), (s, e) => {
+                if (s is MainWindow mw)
+                {
+                    mw._shortPathLine.InertiaValue = (double)e.NewValue;
+                }
+            }));
+
+        public double InertiaValue { get => (double)GetValue(InertiaValueProperty); set => SetValue(InertiaValueProperty, value); }
     }
 }
