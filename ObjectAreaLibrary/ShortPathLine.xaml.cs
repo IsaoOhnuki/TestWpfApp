@@ -56,7 +56,7 @@ namespace ObjectAreaLibrary
             double step = 10;
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
-            var result = AStar.Instance.Exec(startPos, endPos, limitRect, step, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            var result = AStar.Instance.Exec(startPos, endPos, step, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
             if (result)
             {
                 var linePos = AStar.Instance.AdoptList();

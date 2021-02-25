@@ -71,7 +71,7 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint);
         }
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, double step, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, double step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
             SetGoal(endPos, step);
