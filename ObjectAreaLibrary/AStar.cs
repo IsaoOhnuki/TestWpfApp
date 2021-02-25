@@ -7,7 +7,7 @@ namespace ObjectAreaLibrary
 {
     using NodePoint = Point;
     using NodeRect = Rect;
-    using Viewpoint = Func<Point, int, Rect, IEnumerable<Rect>, IEnumerable<Point>>;
+    using Viewpoint = Func<Point, double, Rect, IEnumerable<Rect>, IEnumerable<Point>>;
     using Heuristic = Func<Point, Point, double>;
 
     public class AStarNode
@@ -28,8 +28,6 @@ namespace ObjectAreaLibrary
         public static AStar Instance { get => _instance ??= new AStar(); }
 
         private Dictionary<NodePoint, AStarNode> NodeCollection { get; } = new Dictionary<NodePoint, AStarNode>();
-
-        public static int Step { get; set; } = 10;
 
         private int _astarNodeIndex;
         private AStarNode CreatAStarNode(NodePoint point, double forward, double backward, AStarNode parent = null, bool adopt = false, bool clear = false)
@@ -76,17 +74,17 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint);
         }
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        public bool Exec(NodePoint startPos, NodePoint endPos, NodeRect limitRect, double step, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             ClearNodes();
-            SetGoal(endPos, Step);
+            SetGoal(endPos, step);
 
-            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), Step, Step);
+            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
 
-            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), Math.Abs(GetBackward(startPos, endPos)), clear: true);
+            var firstNode = CreatAStarNode(startPos, heuristic(startPos, endPos), GetBackward(startPos, endPos), clear: true);
             AddNodes(firstNode);
 
-            return ExecAStar(firstNode, endPos, Step, limitRect, obstacles
+            return ExecAStar(firstNode, endPos, step, limitRect, obstacles
                 .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
@@ -95,7 +93,7 @@ namespace ObjectAreaLibrary
                 viewpoint, heuristic);
         }
 
-        private bool ExecAStar(AStarNode node, NodePoint endPos, int step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+        private bool ExecAStar(AStarNode node, NodePoint endPos, double step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             if (obstacles.Any(_ => _.Contains(node.NodePoint) || _.Contains(endPos)))
             {
@@ -119,12 +117,12 @@ namespace ObjectAreaLibrary
                 }
 
                 var viewpoints = viewpoint(node.NodePoint, step, limitRect, obstacles);
-                foreach (var viewPpos in viewpoints)
+                foreach (var viewPos in viewpoints)
                 {
-                    var newNode = NodeAt(viewPpos);
+                    var newNode = NodeAt(viewPos);
                     if (newNode == null)
                     {
-                        AddNodes(CreatAStarNode(viewPpos, heuristic(viewPpos, endPos), Math.Abs(GetBackward(viewPpos, endPos)), parent: node));
+                        AddNodes(CreatAStarNode(viewPos, heuristic(viewPos, endPos), Math.Abs(GetBackward(viewPos, endPos)), parent: node));
                     }
                 }
 
@@ -140,7 +138,7 @@ namespace ObjectAreaLibrary
         }
 
         private NodeRect _goal;
-        private void SetGoal(NodePoint endPos, int step)
+        private void SetGoal(NodePoint endPos, double step)
         {
             _goal = new NodeRect(endPos, new Size(1, 1));
             _goal.Inflate(step, step);
@@ -168,7 +166,8 @@ namespace ObjectAreaLibrary
 
         private double GetBackward(NodePoint startPos, NodePoint endPos)
         {
-            return (endPos.X - startPos.X) + (endPos.Y - startPos.Y);
+            return (startPos.X < endPos.X ? endPos.X - startPos.X : startPos.X - endPos.X)
+                + (startPos.Y < endPos.Y ? endPos.Y - startPos.Y : startPos.Y - endPos.Y);
         }
 
         public static double Heuristic(NodePoint startPos, NodePoint endPos)
@@ -177,56 +176,43 @@ namespace ObjectAreaLibrary
             return Math.Sqrt(point.X * point.X + point.Y * point.Y);
         }
 
-        public static IEnumerable<NodePoint> Viewpoint(NodePoint point, int step, NodeRect limitRect, IEnumerable<NodeRect> rects)
+        public static IEnumerable<NodePoint> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects)
         {
             bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
             var rectContains = rects.Count() > 0;
-            NodePoint? leftPos = null;
+            List<NodePoint> ret = new List<NodePoint>();
             if (noLimmit || point.X + step <= limitRect.BottomRight.X)
             {
                 var pos = new NodePoint(point.X + step, point.Y);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
-                    leftPos = pos;
+                    ret.Add(pos);
                 }
             }
-            NodePoint? topPos = null;
             if (noLimmit || point.Y + step <= limitRect.BottomRight.Y)
             {
                 var pos = new NodePoint(point.X, point.Y + step);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
-                    topPos = pos;
+                    ret.Add(pos);
                 }
             }
-            NodePoint? rightPos = null;
             if (noLimmit || point.X - step >= limitRect.TopLeft.X)
             {
                 var pos = new NodePoint(point.X - step, point.Y);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
-                    rightPos = pos;
+                    ret.Add(pos);
                 }
             }
-            NodePoint? bottomPos = null;
             if (noLimmit || point.Y - step >= limitRect.TopLeft.Y)
             {
                 var pos = new NodePoint(point.X, point.Y - step);
                 if (!rectContains || !rects.Any(_ => _.Contains(pos)))
                 {
-                    bottomPos = pos;
+                    ret.Add(pos);
                 }
             }
-
-            List<NodePoint> ret = new List<NodePoint>();
-            if (leftPos.HasValue)
-                ret.Add(leftPos.Value);
-            if (topPos.HasValue)
-                ret.Add(topPos.Value);
-            if (rightPos.HasValue)
-                ret.Add(rightPos.Value);
-            if (bottomPos.HasValue)
-                ret.Add(bottomPos.Value);
 
             return ret;
         }

@@ -1,21 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace ObjectAreaLibrary
 {
-    using NodePoint = System.Drawing.Point;
-
     /// <summary>
     /// UserControl1.xaml の相互作用ロジック
     /// </summary>
@@ -61,9 +53,10 @@ namespace ObjectAreaLibrary
         public void SetLine(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
         {
             double diff = shortPathLine.StrokeThickness;
+            double step = 10;
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
-            var result = AStar.Instance.Exec(startPos, endPos, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            var result = AStar.Instance.Exec(startPos, endPos, limitRect, step, obstacles, AStar.Viewpoint, AStar.Heuristic);
             if (result)
             {
                 var linePos = AStar.Instance.AdoptList();
