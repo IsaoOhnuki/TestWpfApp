@@ -6,6 +6,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using log4net;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TestCoreApp
 {
@@ -17,9 +18,9 @@ namespace TestCoreApp
         //log4net.Config.XmlConfigurator.Configure(new System.IO.FileInfo("log4net.config"));
         private static log4net.ILog logger = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
+        List<MockAreaContents> _obstacles = new List<MockAreaContents>();
         MockAreaContents _item1;
         MockAreaContents _item2;
-        MockAreaContents _item3;
 
         public MainWindow()
         {
@@ -42,36 +43,72 @@ namespace TestCoreApp
                 Background = new SolidColorBrush(Colors.Blue),
                 BorderBrush = new SolidColorBrush(Colors.Black),
                 BorderThickness = new Thickness(2),
-                Left = 200,
-                Top = 200,
-                Width = 200,
-                Height = 150,
-            };
-            _item3 = new MockAreaContents()
-            {
-                Background = new SolidColorBrush(Colors.Green),
-                BorderBrush = new SolidColorBrush(Colors.Black),
-                BorderThickness = new Thickness(2),
-                Left = 300,
-                Top = 300,
+                Left = 500,
+                Top = 400,
                 Width = 200,
                 Height = 150,
             };
             contentsArea.Add(_item1);
             contentsArea.Add(_item2);
-            contentsArea.Add(_item3);
 
-            var rects = new List<Rect>();
-            rects.Add(_item2.Bounds);
+            var item31 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 320,
+                Top = 80,
+                Width = 200,
+                Height = 150,
+            };
+            var item32 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 80,
+                Top = 270,
+                Width = 200,
+                Height = 150,
+            };
+            var item33 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 320,
+                Top = 270,
+                Width = 200,
+                Height = 150,
+            };
+            var item34 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 480,
+                Top = 380,
+                Width = 200,
+                Height = 150,
+            };
+            contentsArea.Add(item31);
+            contentsArea.Add(item32);
+            contentsArea.Add(item33);
+            contentsArea.Add(item34);
+
+            _obstacles.Add(item31);
+            _obstacles.Add(item32);
+            _obstacles.Add(item33);
+            _obstacles.Add(item34);
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
+            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
 
             _item1.LocationChangedEvent += Item_LocationChanged;
             _item1.SizeChanged += Item_SizeChanged;
-            _item3.LocationChangedEvent += Item_LocationChanged;
-            _item3.SizeChanged += Item_SizeChanged;
+            _item2.LocationChangedEvent += Item_LocationChanged;
+            _item2.SizeChanged += Item_SizeChanged;
 
             InertiaValue = 10;
         }
@@ -97,10 +134,7 @@ namespace TestCoreApp
         {
             if (areaitem is MockAreaContents mock)
             {
-                var rects = new List<Rect>();
-                rects.Add(_item2.Bounds);
-
-                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item3.Left, _item3.Top), new Rect(new Point(0, 0), new Point(0, 0)), rects);
+                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
             }
         }
 
