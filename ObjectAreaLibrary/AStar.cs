@@ -8,12 +8,11 @@ namespace ObjectAreaLibrary
     using NodePoint = Point;
     using NodeRect = Rect;
     using VectorPos = Tuple<VectorType, Point>;
-    using Viewpoint = Func<Point, double, Rect, IEnumerable<Rect>, VectorType, IEnumerable<Tuple<VectorType, Point>>>;
+    using Viewpoint = Func<Point, double, Rect, IEnumerable<Rect>, VectorType?, IEnumerable<Tuple<VectorType, Point>>>;
     using Heuristic = Func<Point, Point, double>;
 
     public enum VectorType
     {
-        None,
         LeftToRight,
         RightToLeft,
         TopToBottom,
@@ -22,7 +21,6 @@ namespace ObjectAreaLibrary
 
     public enum VectorDirection
     {
-        None,
         Horizontal,
         Virtical,
     }
@@ -142,17 +140,16 @@ namespace ObjectAreaLibrary
                     var parentNodeVector = parentNode.NodePoint.Item1;
                     AStarNode lastNode;
                     if (!EqualVectorDirection(nodeVector, parentNodeVector)
-                        && (
-                            (CheckVectorDirection(nodeVector) == VectorDirection.Horizontal && (lastNode = GetLastVectorDirection(parentNode, VectorDirection.Horizontal)) != null)
-                            || (CheckVectorDirection(nodeVector) == VectorDirection.Virtical && (lastNode = GetLastVectorDirection(parentNode, VectorDirection.Virtical)) != null)
-                        )
-                        && lastNode.NodePoint.Item1 != nodeVector && (lastNode.Parent == null || lastNode.NodePoint.Item1 == lastNode.Parent.NodePoint.Item1))
+                        && (lastNode = GetLastVectorDirection(parentNode, GetVectorDirection(nodeVector))) != null
+                        && lastNode.NodePoint.Item1 != nodeVector)
                     {
                         ShortCut(lastNode.Parent, node, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic);
+                        nodeVector = node.NodePoint.Item1;
+                        nodePoint = node.NodePoint.Item2;
                     }
                 }
 
-                var newViewpPoints = viewpoint(nodePoint, step, limitRect, obstacles, VectorType.None);
+                var newViewpPoints = viewpoint(nodePoint, step, limitRect, obstacles, null);
                 foreach (var newViewPoint in newViewpPoints)
                 {
                     var newNodeVector = newViewPoint.Item1;
@@ -197,6 +194,7 @@ namespace ObjectAreaLibrary
                 var pos = viewpoints.First();
                 if (pos.Item2 == endPos)
                 {
+                    nodeR.NodePoint = pos;
                     nodeR.Parent = node;
                     break;
                 }
@@ -206,21 +204,21 @@ namespace ObjectAreaLibrary
                 var newNode = NodeAt(viewPos);
                 if (newNode == null)
                 {
-                    var hVal = heuristic(viewPos, endPos);
-                    hVal -= inertia;
-                    newNode = CreatAStarNode(pos, hVal, GetBackward(viewPos, endPos), parent: node);
+                    break;
                 }
+                newNode.NodePoint = pos;
+                newNode.Inspected = true;
+                newNode.Parent = node;
                 node = newNode;
             }
         }
 
         private AStarNode GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection)
         {
-            while (node != null)
+            for (int idx = 0; node != null; ++idx)
             {
                 var nodeVector = node.NodePoint.Item1;
-                if ((vectorDirection == VectorDirection.Horizontal && nodeVector == VectorType.LeftToRight || nodeVector == VectorType.RightToLeft)
-                    || (vectorDirection == VectorDirection.Virtical && nodeVector == VectorType.TopToBottom || nodeVector == VectorType.BottomToTop))
+                if (EqualVectorDirection(nodeVector, vectorDirection))
                 {
                     break;
                 }
@@ -229,28 +227,44 @@ namespace ObjectAreaLibrary
             return node;
         }
 
-        private VectorDirection CheckVectorDirection(VectorType vectorTypeL)
+        private VectorDirection GetVectorDirection(VectorType vectorType)
         {
-            if (vectorTypeL == VectorType.LeftToRight || vectorTypeL == VectorType.RightToLeft)
+            switch (vectorType)
+            {
+                case VectorType.LeftToRight:
+                    return VectorDirection.Horizontal;
+                case VectorType.TopToBottom:
+                    return VectorDirection.Virtical;
+                case VectorType.RightToLeft:
+                    return VectorDirection.Horizontal;
+                case VectorType.BottomToTop:
+                    return VectorDirection.Virtical;
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
+        private VectorDirection OppositeVectorDirection(VectorType vectorType)
+        {
+            return OppositeVectorDirection(GetVectorDirection(vectorType));
+        }
+
+        private VectorDirection OppositeVectorDirection(VectorDirection direction)
+        {
+            if (direction == VectorDirection.Virtical)
             {
                 return VectorDirection.Horizontal;
             }
-            if (vectorTypeL == VectorType.TopToBottom || vectorTypeL == VectorType.BottomToTop)
+            else if (direction == VectorDirection.Horizontal)
             {
                 return VectorDirection.Virtical;
             }
-            return VectorDirection.None;
+            throw new ArgumentException();
         }
 
         private bool EqualVectorDirection(VectorType vectorTypeL, VectorType vectorTypeR)
         {
-            if ((vectorTypeL == VectorType.LeftToRight || vectorTypeL == VectorType.RightToLeft)
-                && (vectorTypeR == VectorType.LeftToRight || vectorTypeR == VectorType.RightToLeft))
-            {
-                return true;
-            }
-            if ((vectorTypeL == VectorType.TopToBottom || vectorTypeL == VectorType.BottomToTop)
-                && (vectorTypeR == VectorType.TopToBottom || vectorTypeR == VectorType.BottomToTop))
+            if (GetVectorDirection(vectorTypeL) == GetVectorDirection(vectorTypeR))
             {
                 return true;
             }
@@ -259,11 +273,7 @@ namespace ObjectAreaLibrary
 
         private bool EqualVectorDirection(VectorType vectorType, VectorDirection vectorDirection)
         {
-            if ((vectorType == VectorType.LeftToRight || vectorType == VectorType.RightToLeft) && (vectorDirection == VectorDirection.Horizontal))
-            {
-                return true;
-            }
-            if ((vectorType == VectorType.TopToBottom || vectorType == VectorType.BottomToTop) && (vectorDirection == VectorDirection.Virtical))
+            if (GetVectorDirection(vectorType) == vectorDirection)
             {
                 return true;
             }
@@ -326,24 +336,20 @@ namespace ObjectAreaLibrary
             {
                 type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.LeftToRight : VectorType.BottomToTop;
             }
-            else if(vector.X < 0 && vector.Y < 0)
+            else // if(vector.X < 0 && vector.Y < 0)
             {
                 type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.RightToLeft : VectorType.BottomToTop;
-            }
-            else
-            {
-                type = VectorType.None;
             }
 
             return type;
         }
 
-        public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects, VectorType priorityVector = VectorType.None)
+        public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects, VectorType? priorityVector = null)
         {
             bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
             var rectContains = rects.Count() > 0;
             List<VectorPos> ret = new List<VectorPos>();
-            if ((priorityVector == VectorType.None || priorityVector == VectorType.LeftToRight)
+            if ((!priorityVector.HasValue || priorityVector == VectorType.LeftToRight)
                 && (noLimmit || point.X + step <= limitRect.BottomRight.X))
             {
                 var pos = new NodePoint(point.X + step, point.Y);
@@ -352,7 +358,7 @@ namespace ObjectAreaLibrary
                     ret.Add(new VectorPos(VectorType.LeftToRight, pos));
                 }
             }
-            if ((priorityVector == VectorType.None || priorityVector == VectorType.TopToBottom)
+            if ((!priorityVector.HasValue || priorityVector == VectorType.TopToBottom)
                 && (noLimmit || point.Y + step <= limitRect.BottomRight.Y))
             {
                 var pos = new NodePoint(point.X, point.Y + step);
@@ -361,7 +367,7 @@ namespace ObjectAreaLibrary
                     ret.Add(new VectorPos(VectorType.TopToBottom, pos));
                 }
             }
-            if ((priorityVector == VectorType.None || priorityVector == VectorType.RightToLeft)
+            if ((!priorityVector.HasValue || priorityVector == VectorType.RightToLeft)
                 && (noLimmit || point.X - step >= limitRect.TopLeft.X))
             {
                 var pos = new NodePoint(point.X - step, point.Y);
@@ -370,7 +376,7 @@ namespace ObjectAreaLibrary
                     ret.Add(new VectorPos(VectorType.RightToLeft, pos));
                 }
             }
-            if ((priorityVector == VectorType.None || priorityVector == VectorType.BottomToTop)
+            if ((!priorityVector.HasValue || priorityVector == VectorType.BottomToTop)
                 && (noLimmit || point.Y - step >= limitRect.TopLeft.Y))
             {
                 var pos = new NodePoint(point.X, point.Y - step);
