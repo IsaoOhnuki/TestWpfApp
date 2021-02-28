@@ -11,9 +11,35 @@ using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Text;
+using System.Globalization;
 
 namespace TestCoreApp
 {
+    public class BooleanToEnumerateConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var ParameterString = parameter as string;
+            if (ParameterString == null)
+            {
+                return DependencyProperty.UnsetValue;
+            }
+            if (Enum.IsDefined(value.GetType(), value) == false)
+            {
+                return DependencyProperty.UnsetValue;
+            }
+            object paramvalue = Enum.Parse(value.GetType(), ParameterString);
+            return (int)paramvalue == (int)value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var ParameterString = parameter as string;
+            // ラジオボタン用のコンバータ。false→trueの変化のみ反応する。
+            return ParameterString == null || !(bool)value ? DependencyProperty.UnsetValue : Enum.Parse(targetType, ParameterString);
+        }
+    }
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -171,11 +197,15 @@ namespace TestCoreApp
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             SaveFileDialog sfd = new SaveFileDialog();
-            sfd.FileName = DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
+            var filename = DateTime.Now.ToString("yyyyMMddHHmmss");
+            if (CSVType != AStarNode.ValueType.None)
+            {
+                filename += "_" + CSVType.ToString();
+            }
+            sfd.FileName = filename + ".csv";
             var ret = sfd.ShowDialog();
             if (ret.HasValue && ret.Value)
             {
-                _shortPathLine.CsvType = AStarNode.ValueType.Cost;
                 var csv = _shortPathLine.CSV;
                 var fs = new StreamWriter(sfd.FileName, false, Encoding.UTF8);
                 fs.WriteLine(csv);
@@ -183,5 +213,18 @@ namespace TestCoreApp
             }
             MessageBox.Show("CSVファイルが出力されました。");
         }
+
+        public static readonly DependencyProperty CSVTypeProperty = DependencyProperty.Register(
+            nameof(CSVType),
+            typeof(AStarNode.ValueType),
+            typeof(MainWindow),
+            new FrameworkPropertyMetadata(AStarNode.ValueType.None, (d, e) => {
+                if (d is MainWindow mw)
+                {
+                    mw._shortPathLine.CsvType = (AStarNode.ValueType)e.NewValue;
+                }
+            }));
+
+        public AStarNode.ValueType CSVType { get => (AStarNode.ValueType)GetValue(CSVTypeProperty); set => SetValue(CSVTypeProperty, value); }
     }
 }

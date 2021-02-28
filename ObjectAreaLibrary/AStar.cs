@@ -37,6 +37,16 @@ namespace ObjectAreaLibrary
         public int Index;
         public AStarNode Parent;
 
+        public enum ValueType
+        {
+            None,
+            Adopt,
+            Forward,
+            Cost,
+            Vector,
+        }
+
+        #region ToString
         public string AdoptString()
         {
             return Adopt ? "*" : "-";
@@ -77,15 +87,6 @@ namespace ObjectAreaLibrary
                     throw new ArgumentException();
             }
         }
-
-        public enum ValueType
-        {
-            None,
-            Adopt,
-            Forward,
-            Cost,
-            Vector,
-        }
         public string ToString(ValueType type)
         {
             switch (type)
@@ -115,6 +116,7 @@ namespace ObjectAreaLibrary
             ret.Append(PointString());
             return ret.ToString();
         }
+        #endregion
     }
 
     public class AStar
@@ -249,13 +251,13 @@ namespace ObjectAreaLibrary
                         && lastNode.NodePoint.Item1 != nodeVector)
                     {
                         var nd = node.Parent;
-                        if (ShortCut(lastNode.Parent, node, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic))
+                        if (ShortCut(lastNode.Parent, node, endPos, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic))
                         {
-                            //while (nd != lastNode)
-                            //{
-                            //    nd.Forward += inertia;
-                            //    nd = nd.Parent;
-                            //}
+                            while (nd != lastNode)
+                            {
+                                nd.Forward += inertia;
+                                nd = nd.Parent;
+                            }
                             nodeVector = node.NodePoint.Item1;
                             nodePoint = node.NodePoint.Item2;
                         }
@@ -288,7 +290,7 @@ namespace ObjectAreaLibrary
             return result;
         }
 
-        private bool ShortCut(AStarNode nodeL, AStarNode nodeR, VectorType priorityVector, double step, double inertia,
+        private bool ShortCut(AStarNode nodeL, AStarNode nodeR, NodePoint goalPos, VectorType priorityVector, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
             bool result = true;
@@ -316,7 +318,8 @@ namespace ObjectAreaLibrary
                 var newNode = NodeAt(viewPos);
                 if (newNode == null)
                 {
-                    break;
+                    newNode = CreatAStarNode(pos, heuristic(viewPos, goalPos) - inertia, GetBackward(viewPos, goalPos), parent: node);
+                    AddNodes(newNode);
                 }
                 newNode.NodePoint = pos;
                 newNode.Inspected = true;

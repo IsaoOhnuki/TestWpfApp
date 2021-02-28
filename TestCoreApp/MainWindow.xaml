@@ -7,6 +7,11 @@
         xmlns:ContentsCanvas="clr-namespace:ContentsCanvas;assembly=ObjectAreaLibrary"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
+    <Window.Resources>
+        <ResourceDictionary>
+            <local:BooleanToEnumerateConverter x:Key="EnumComv" />
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -14,7 +19,31 @@
         </Grid.RowDefinitions>
 
         <ToolBar Grid.Row="0">
+            <CheckBox/>
+            <RadioButton Content="Cost"
+                         GroupName="CSV"
+                         IsChecked="{Binding Path=CSVType,
+                                             RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:MainWindow}},
+                                             Mode=TwoWay,
+                                             Converter={StaticResource EnumComv},
+                                             ConverterParameter=Cost}"/>
+            <RadioButton Content="Vector"
+                         GroupName="CSV"
+                         IsChecked="{Binding Path=CSVType,
+                                             RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:MainWindow}},
+                                             Mode=TwoWay,
+                                             Converter={StaticResource EnumComv},
+                                             ConverterParameter=Vector}"/>
+            <RadioButton Content="Forward"
+                         GroupName="CSV"
+                         IsChecked="{Binding Path=CSVType,
+                                             RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:MainWindow}},
+                                             Mode=TwoWay,
+                                             Converter={StaticResource EnumComv},
+                                             ConverterParameter=Forward}"/>
+            <Separator/>
             <Button Content="CSV" Click="Button_Click"/>
+            <Separator/>
             <CheckBox Content="Inertia" IsChecked="{Binding Path=Inertia, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type local:MainWindow}}}"/>
             <TextBlock x:Name="tbcInertia"
                        Width="70"
