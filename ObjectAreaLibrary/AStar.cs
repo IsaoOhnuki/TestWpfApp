@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Windows;
 
 namespace ObjectAreaLibrary
@@ -35,6 +36,85 @@ namespace ObjectAreaLibrary
         public bool Adopt;
         public int Index;
         public AStarNode Parent;
+
+        public string AdoptString()
+        {
+            return Adopt ? "*" : "-";
+        }
+        public string IndexString()
+        {
+            return Index.ToString("0000");
+        }
+        public string ForwardString()
+        {
+            return Forward.ToString("0.00000000");
+        }
+        public string BackwardString()
+        {
+            return Backward.ToString("0.00000000");
+        }
+        public string CostString()
+        {
+            return Cost.ToString("0.00000000");
+        }
+        public string PointString()
+        {
+            return "(" + ((int)NodePoint.Item2.X).ToString("0000") + ":" + ((int)NodePoint.Item2.Y).ToString("0000") + ")";
+        }
+        public string VectorString()
+        {
+            switch (NodePoint.Item1)
+            {
+                case VectorType.LeftToRight:
+                    return "→";
+                case VectorType.TopToBottom:
+                    return "↓";
+                case VectorType.RightToLeft:
+                    return "←";
+                case VectorType.BottomToTop:
+                    return "↑";
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
+        public enum ValueType
+        {
+            None,
+            Adopt,
+            Forward,
+            Cost,
+            Vector,
+        }
+        public string ToString(ValueType type)
+        {
+            switch (type)
+            {
+                case ValueType.Adopt:
+                    return AdoptString();
+                case ValueType.Forward:
+                    return ForwardString();
+                case ValueType.Vector:
+                    return VectorString();
+                case ValueType.Cost:
+                    return CostString();
+                default:
+                    return ToString();
+            }
+        }
+        public override string ToString()
+        {
+            var ret = new StringBuilder();
+            ret.Append(AdoptString() + IndexString());
+            ret.Append(";");
+            ret.Append("F " + ForwardString());
+            ret.Append(";");
+            ret.Append("B " + BackwardString());
+            ret.Append(";");
+            ret.Append(VectorString());
+            ret.Append(PointString());
+            return ret.ToString();
+        }
     }
 
     public class AStar
@@ -84,6 +164,31 @@ namespace ObjectAreaLibrary
                 .Where(_ => _.Value.Adopt)
                 .OrderBy(_ => _.Value.Index)
                 .Select(_ => _.Value.NodePoint.Item2);
+        }
+
+        public string GetCsv(int step, AStarNode.ValueType csvType)
+        {
+            var list = NodeCollection
+                .OrderBy(_ => _.Value.NodePoint.Item2.Y)
+                .ThenBy(_ => _.Value.NodePoint.Item2.X)
+                .Select(_ => new Tuple<System.Drawing.Point, AStarNode>(new System.Drawing.Point((int)_.Value.NodePoint.Item2.X, (int)_.Value.NodePoint.Item2.Y), _.Value));
+            var minX = NodeCollection.Min(_ => (int)_.Key.X);
+            var minY = NodeCollection.Min(_ => (int)_.Key.Y);
+            var maxX = NodeCollection.Max(_ => (int)_.Key.X);
+            var maxY = NodeCollection.Max(_ => (int)_.Key.Y);
+
+            var strY = new List<string>();
+            for (var y = minY; y <= maxY; y += step)
+            {
+                var strX = new List<string>();
+                for (var x = minX; x <= maxX; x += step)
+                {
+                    var node = list.Where(_ => _.Item1.X == x && _.Item1.Y == y).FirstOrDefault();
+                    strX.Add((node != null) ? node.Item2.ToString(csvType) : "");
+                }
+                strY.Add(string.Join(',', strX));
+            }
+            return string.Join("\r\n", strY);
         }
 
         public bool Exec(NodePoint startPos, NodePoint endPos, double step, double inertia,
@@ -143,9 +248,17 @@ namespace ObjectAreaLibrary
                         && (lastNode = GetLastVectorDirection(parentNode, GetVectorDirection(nodeVector))) != null
                         && lastNode.NodePoint.Item1 != nodeVector)
                     {
-                        ShortCut(lastNode.Parent, node, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic);
-                        nodeVector = node.NodePoint.Item1;
-                        nodePoint = node.NodePoint.Item2;
+                        var nd = node.Parent;
+                        if (ShortCut(lastNode.Parent, node, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic))
+                        {
+                            //while (nd != lastNode)
+                            //{
+                            //    nd.Forward += inertia;
+                            //    nd = nd.Parent;
+                            //}
+                            nodeVector = node.NodePoint.Item1;
+                            nodePoint = node.NodePoint.Item2;
+                        }
                     }
                 }
 
@@ -175,16 +288,14 @@ namespace ObjectAreaLibrary
             return result;
         }
 
-        private void ShortCut(AStarNode nodeL, AStarNode nodeR, VectorType priorityVector, double step, double inertia,
+        private bool ShortCut(AStarNode nodeL, AStarNode nodeR, VectorType priorityVector, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
+            bool result = true;
             var node = nodeL;
             var endPos = nodeR.NodePoint.Item2;
             while (node != null)
             {
-                if (node.NodePoint.Item2.X != endPos.X && node.NodePoint.Item2.Y != endPos.Y)
-                    break;
-
                 var nodeVector = node.NodePoint.Item1;
                 var nodePoint = node.NodePoint.Item2;
                 var viewpoints = viewpoint(nodePoint, step, limitRect, obstacles, priorityVector);
@@ -196,6 +307,7 @@ namespace ObjectAreaLibrary
                 {
                     nodeR.NodePoint = pos;
                     nodeR.Parent = node;
+                    result = true;
                     break;
                 }
 
@@ -211,6 +323,8 @@ namespace ObjectAreaLibrary
                 newNode.Parent = node;
                 node = newNode;
             }
+
+            return result;
         }
 
         private AStarNode GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection)

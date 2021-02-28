@@ -50,6 +50,10 @@ namespace ObjectAreaLibrary
             set { SetValue(Canvas.TopProperty, value); }
         }
 
+        public AStarNode.ValueType CsvType { get; set; }
+
+        public string CSV { get => AStar.Instance.GetCsv((int)InertiaValue, CsvType); }
+
         public bool Inertia { get; set; }
         public double InertiaValue { get; set; }
 

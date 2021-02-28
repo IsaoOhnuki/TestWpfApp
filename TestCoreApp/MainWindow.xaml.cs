@@ -7,6 +7,10 @@ using System.Windows.Media;
 using log4net;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Text;
 
 namespace TestCoreApp
 {
@@ -163,5 +167,21 @@ namespace TestCoreApp
             }));
 
         public double InertiaValue { get => (double)GetValue(InertiaValueProperty); set => SetValue(InertiaValueProperty, value); }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.FileName = DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
+            var ret = sfd.ShowDialog();
+            if (ret.HasValue && ret.Value)
+            {
+                _shortPathLine.CsvType = AStarNode.ValueType.Cost;
+                var csv = _shortPathLine.CSV;
+                var fs = new StreamWriter(sfd.FileName, false, Encoding.UTF8);
+                fs.WriteLine(csv);
+                fs.Close();
+            }
+            MessageBox.Show("CSVファイルが出力されました。");
+        }
     }
 }
