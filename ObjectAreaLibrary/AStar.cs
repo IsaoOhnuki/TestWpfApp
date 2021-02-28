@@ -234,6 +234,7 @@ namespace ObjectAreaLibrary
                         node.Adopt = true;
                         node = node.Parent;
                     }
+                    node.Adopt = true;
                     result = true;
                     break;
                 }
@@ -298,7 +299,6 @@ namespace ObjectAreaLibrary
             var endPos = nodeR.NodePoint.Item2;
             while (node != null)
             {
-                var nodeVector = node.NodePoint.Item1;
                 var nodePoint = node.NodePoint.Item2;
                 var viewpoints = viewpoint(nodePoint, step, limitRect, obstacles, priorityVector);
                 if (viewpoints.Count() == 0)
@@ -313,7 +313,6 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                var vector = pos.Item1;
                 var viewPos = pos.Item2;
                 var newNode = NodeAt(viewPos);
                 if (newNode == null)
