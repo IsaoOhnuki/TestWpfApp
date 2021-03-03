@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -63,7 +64,8 @@ namespace ObjectAreaLibrary
             double step = 10;
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
-            var result = AStar.Instance.Exec(startPos, endPos, step, Inertia ? InertiaValue : 0, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
+            var vector = GetFirstVector(startPos, endPos);
+            var result = AStar.Instance.Exec(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos), step, Inertia ? InertiaValue : 0, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
             if (result)
             {
                 var linePos = AStar.Instance.AdoptList();
@@ -93,6 +95,30 @@ namespace ObjectAreaLibrary
             Top = bounds.Top - diff;
             Width = bounds.Width + diff + diff;
             Height = bounds.Height + diff + diff;
+        }
+
+        private VectorType GetFirstVector(Point startPos, Point endPos)
+        {
+            VectorType type;
+            Vector vector = endPos - startPos;
+            if (vector.X >= 0 && vector.Y >= 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.LeftToRight : VectorType.TopToBottom;
+            }
+            else if (vector.X < 0 && vector.Y >= 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.RightToLeft : VectorType.TopToBottom;
+            }
+            else if (vector.X >= 0 && vector.Y < 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.LeftToRight : VectorType.BottomToTop;
+            }
+            else // if(vector.X < 0 && vector.Y < 0)
+            {
+                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.RightToLeft : VectorType.BottomToTop;
+            }
+
+            return type;
         }
     }
 }

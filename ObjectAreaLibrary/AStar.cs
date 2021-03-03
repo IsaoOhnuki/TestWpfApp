@@ -193,26 +193,49 @@ namespace ObjectAreaLibrary
             return string.Join("\r\n", strY);
         }
 
-        public bool Exec(NodePoint startPos, NodePoint endPos, double step, double inertia,
+        public bool Exec(VectorPos start, VectorPos end, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
+            VectorType startVector = start.Item1;
+            var startPos = start.Item2;
+            var endPos = end.Item2;
+
             ClearNodes();
             SetGoal(endPos, step);
 
-            VectorType vector = GetFirstVector(startPos, endPos);
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
 
-            var firstNode = CreatAStarNode(new VectorPos(vector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos));
+            var firstNode = CreatAStarNode(new VectorPos(startVector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos));
             AddNodes(firstNode);
 
-            return ExecAStar(firstNode, endPos, step, inertia,
-                limitRect,
-                obstacles.Where(_ =>
+            var trueObstacles = obstacles
+                .Where(_ =>
                 {
                     var diff = NodeRect.Intersect(_, astarBounds);
                     return diff.Width > 0 || diff.Height > 0;
-                }),
-                viewpoint, heuristic);
+                });
+            IEnumerable<NodeRect> nearObstacles = null;
+
+            var obstaclesCount = trueObstacles.Count();
+            var count = 0;
+            while (count != obstaclesCount)
+            {
+                nearObstacles = obstacles
+                    .Where(_ =>
+                    {
+                        if (trueObstacles.Contains(_))
+                            return true;
+                        return trueObstacles
+                            .Any(__ =>
+                            {
+                                var diff = NodeRect.Intersect(__, NodeRect.Inflate(_, step, step));
+                                return diff.Width > 0 || diff.Height > 0;
+                            });
+                    });
+                count = nearObstacles.Count();
+            }
+
+            return ExecAStar(firstNode, endPos, step, inertia, limitRect, nearObstacles, viewpoint, heuristic);
         }
 
         private bool ExecAStar(AStarNode node, NodePoint endPos, double step, double inertia,
@@ -229,12 +252,11 @@ namespace ObjectAreaLibrary
                 node.Inspected = true;
                 if (CheckGoal(node, endPos))
                 {
-                    while (node.Parent != null)
+                    while (node != null)
                     {
                         node.Adopt = true;
                         node = node.Parent;
                     }
-                    node.Adopt = true;
                     result = true;
                     break;
                 }
@@ -410,14 +432,20 @@ namespace ObjectAreaLibrary
             if (result)
             {
                 var vctType = node.NodePoint.Item1;
-                var residue = endPos - nodePos;
-                if (Math.Abs(residue.X) < Math.Abs(residue.Y))
+                switch (vctType)
                 {
-                    AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
-                }
-                else
-                {
-                    AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
+                    case VectorType.LeftToRight:
+                        AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
+                        break;
+                    case VectorType.TopToBottom:
+                        AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
+                        break;
+                    case VectorType.RightToLeft:
+                        AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
+                        break;
+                    case VectorType.BottomToTop:
+                        AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
+                        break;
                 }
                 AddNodes(CreatAStarNode(new VectorPos(vctType, endPos), 0, 0, adopt: true));
             }
@@ -434,30 +462,6 @@ namespace ObjectAreaLibrary
         {
             var point = endPos - startPos;
             return Math.Sqrt(point.X * point.X + point.Y * point.Y);
-        }
-
-        private VectorType GetFirstVector(NodePoint startPos, NodePoint endPos)
-        {
-            VectorType type;
-            Vector vector = endPos - startPos;
-            if (vector.X >= 0 && vector.Y >= 0)
-            {
-                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.LeftToRight : VectorType.TopToBottom;
-            }
-            else if (vector.X < 0 && vector.Y >= 0)
-            {
-                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.RightToLeft : VectorType.TopToBottom;
-            }
-            else if (vector.X >= 0 && vector.Y < 0)
-            {
-                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.LeftToRight : VectorType.BottomToTop;
-            }
-            else // if(vector.X < 0 && vector.Y < 0)
-            {
-                type = Math.Abs(vector.X) > Math.Abs(vector.Y) ? VectorType.RightToLeft : VectorType.BottomToTop;
-            }
-
-            return type;
         }
 
         public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects, VectorType? priorityVector = null)
