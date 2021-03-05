@@ -34,6 +34,7 @@ namespace ObjectAreaLibrary
         public double Cost;
         public bool Inspected;
         public bool Adopt;
+        public bool Goal;
         public int Index;
         public AStarNode Parent;
 
@@ -168,6 +169,14 @@ namespace ObjectAreaLibrary
                 .Select(_ => _.Value.NodePoint.Item2);
         }
 
+        public IEnumerable<NodePoint> AdoptList_()
+        {
+            return NodeCollection
+                .Where(_ => _.Value.Adopt && (_.Value.Goal || _.Value.Parent == null || _.Value.Parent.NodePoint.Item1 != _.Value.NodePoint.Item1))
+                .OrderBy(_ => _.Value.Index)
+                .Select(_ => _.Value.Goal || _.Value.Parent == null  ? _.Value.NodePoint.Item2 : _.Value.Parent.NodePoint.Item2);
+        }
+
         public string GetCsv(int step, AStarNode.ValueType csvType)
         {
             var list = NodeCollection
@@ -218,12 +227,12 @@ namespace ObjectAreaLibrary
 
             var obstaclesCount = trueObstacles.Count();
             var count = 0;
-            while (count != obstaclesCount)
+            while (count < obstaclesCount)
             {
                 nearObstacles = obstacles
                     .Where(_ =>
                     {
-                        if (trueObstacles.Contains(_))
+                        if (trueObstacles.Contains(_) || nearObstacles.Contains(_))
                             return true;
                         return trueObstacles
                             .Any(__ =>
@@ -241,7 +250,7 @@ namespace ObjectAreaLibrary
         private bool ExecAStar(AStarNode node, NodePoint endPos, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
         {
-            if (obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
+            if (obstacles != null && obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
             {
                 return false;
             }
@@ -447,7 +456,9 @@ namespace ObjectAreaLibrary
                         AddNodes(CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
                         break;
                 }
-                AddNodes(CreatAStarNode(new VectorPos(vctType, endPos), 0, 0, adopt: true));
+                var goalNode = CreatAStarNode(new VectorPos(vctType, endPos), 0, 0, adopt: true);
+                goalNode.Goal = true;
+                AddNodes(goalNode);
             }
             return result;
         }
@@ -464,16 +475,16 @@ namespace ObjectAreaLibrary
             return Math.Sqrt(point.X * point.X + point.Y * point.Y);
         }
 
-        public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> rects, VectorType? priorityVector = null)
+        public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, VectorType? priorityVector = null)
         {
             bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
-            var rectContains = rects.Count() > 0;
+            var rectContains = obstacles != null && obstacles.Count() > 0;
             List<VectorPos> ret = new List<VectorPos>();
             if ((!priorityVector.HasValue || priorityVector == VectorType.LeftToRight)
                 && (noLimmit || point.X + step <= limitRect.BottomRight.X))
             {
                 var pos = new NodePoint(point.X + step, point.Y);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                if (!rectContains || !obstacles.Any(_ => _.Contains(pos)))
                 {
                     ret.Add(new VectorPos(VectorType.LeftToRight, pos));
                 }
@@ -482,7 +493,7 @@ namespace ObjectAreaLibrary
                 && (noLimmit || point.Y + step <= limitRect.BottomRight.Y))
             {
                 var pos = new NodePoint(point.X, point.Y + step);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                if (!rectContains || !obstacles.Any(_ => _.Contains(pos)))
                 {
                     ret.Add(new VectorPos(VectorType.TopToBottom, pos));
                 }
@@ -491,7 +502,7 @@ namespace ObjectAreaLibrary
                 && (noLimmit || point.X - step >= limitRect.TopLeft.X))
             {
                 var pos = new NodePoint(point.X - step, point.Y);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                if (!rectContains || !obstacles.Any(_ => _.Contains(pos)))
                 {
                     ret.Add(new VectorPos(VectorType.RightToLeft, pos));
                 }
@@ -500,7 +511,7 @@ namespace ObjectAreaLibrary
                 && (noLimmit || point.Y - step >= limitRect.TopLeft.Y))
             {
                 var pos = new NodePoint(point.X, point.Y - step);
-                if (!rectContains || !rects.Any(_ => _.Contains(pos)))
+                if (!rectContains || !obstacles.Any(_ => _.Contains(pos)))
                 {
                     ret.Add(new VectorPos(VectorType.BottomToTop, pos));
                 }

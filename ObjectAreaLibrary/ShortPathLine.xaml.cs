@@ -68,7 +68,7 @@ namespace ObjectAreaLibrary
             var result = AStar.Instance.Exec(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos), step, Inertia ? InertiaValue : 0, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
             if (result)
             {
-                var linePos = AStar.Instance.AdoptList();
+                var linePos = AStar.Instance.AdoptList_();
                 if (linePos.Count() > 0)
                 {
                     bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
