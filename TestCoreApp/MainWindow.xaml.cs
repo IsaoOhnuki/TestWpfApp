@@ -121,15 +121,63 @@ namespace TestCoreApp
                 Width = 200,
                 Height = 150,
             };
+            var item35 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 480,
+                Top = 380,
+                Width = 200,
+                Height = 150,
+            };
+            var item36 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 480,
+                Top = 380,
+                Width = 200,
+                Height = 150,
+            };
+            var item37 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 480,
+                Top = 380,
+                Width = 200,
+                Height = 150,
+            };
+            var item38 = new MockAreaContents()
+            {
+                Background = new SolidColorBrush(Colors.Green),
+                BorderBrush = new SolidColorBrush(Colors.Black),
+                BorderThickness = new Thickness(2),
+                Left = 480,
+                Top = 380,
+                Width = 200,
+                Height = 150,
+            };
             contentsArea.Add(item31);
             contentsArea.Add(item32);
             contentsArea.Add(item33);
             contentsArea.Add(item34);
+            contentsArea.Add(item35);
+            contentsArea.Add(item36);
+            contentsArea.Add(item37);
+            contentsArea.Add(item38);
 
             _obstacles.Add(item31);
             _obstacles.Add(item32);
             _obstacles.Add(item33);
             _obstacles.Add(item34);
+            _obstacles.Add(item35);
+            _obstacles.Add(item36);
+            _obstacles.Add(item37);
+            _obstacles.Add(item38);
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);

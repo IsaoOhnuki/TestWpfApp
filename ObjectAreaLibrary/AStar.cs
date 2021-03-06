@@ -9,8 +9,8 @@ namespace ObjectAreaLibrary
     using NodePoint = Point;
     using NodeRect = Rect;
     using VectorPos = Tuple<VectorType, Point>;
-    using Viewpoint = Func<Point, double, Rect, IEnumerable<Rect>, VectorType?, IEnumerable<Tuple<VectorType, Point>>>;
-    using Heuristic = Func<Point, Point, double>;
+    using ViewpointFunc = Func<Point, double, Rect, IEnumerable<Rect>, VectorType?, IEnumerable<Tuple<VectorType, Point>>>;
+    using HeuristicFunc = Func<Point, Point, double>;
 
     public enum VectorType
     {
@@ -203,52 +203,47 @@ namespace ObjectAreaLibrary
         }
 
         public bool Exec(VectorPos start, VectorPos end, double step, double inertia,
-            NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+            NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpointFunc, HeuristicFunc heuristicFunc)
         {
             VectorType startVector = start.Item1;
             var startPos = start.Item2;
             var endPos = end.Item2;
+
+            if (limitRect == null)
+            {
+                limitRect = GetUnionRectOrDefaultRect(obstacles, startPos, endPos);
+                limitRect.Inflate(inertia, inertia);
+            }
 
             ClearNodes();
             SetGoal(endPos, step);
 
             var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
 
-            var firstNode = CreatAStarNode(new VectorPos(startVector, startPos), heuristic(startPos, endPos), GetBackward(startPos, endPos));
+            var firstNode = CreatAStarNode(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
             AddNodes(firstNode);
 
-            var trueObstacles = obstacles
-                .Where(_ =>
-                {
-                    var diff = NodeRect.Intersect(_, astarBounds);
-                    return diff.Width > 0 || diff.Height > 0;
-                });
-            IEnumerable<NodeRect> nearObstacles = null;
-
-            var obstaclesCount = trueObstacles.Count();
-            var count = 0;
-            while (count < obstaclesCount)
+            var nearObstacles = new List<NodeRect>(obstacles.Where(_ => !NodeRect.Intersect(_, astarBounds).IsEmpty));
+            var falseObstacles = new List<NodeRect>(obstacles.Where(_ => NodeRect.Intersect(_, astarBounds).IsEmpty));
+            while (falseObstacles.Count() > 0)
             {
-                nearObstacles = obstacles
-                    .Where(_ =>
-                    {
-                        if (trueObstacles.Contains(_) || nearObstacles.Contains(_))
-                            return true;
-                        return trueObstacles
-                            .Any(__ =>
-                            {
-                                var diff = NodeRect.Intersect(__, NodeRect.Inflate(_, step, step));
-                                return diff.Width > 0 || diff.Height > 0;
-                            });
-                    });
-                count = nearObstacles.Count();
+                var newList = falseObstacles.Where(_ => nearObstacles.Any(__ => !NodeRect.Intersect(_, __).IsEmpty)).ToArray();
+                if (newList.Count() == 0)
+                {
+                    break;
+                }
+                foreach (var newRect in newList)
+                {
+                    falseObstacles.Remove(newRect);
+                    nearObstacles.Add(newRect);
+                }
             }
 
-            return ExecAStar(firstNode, endPos, step, inertia, limitRect, nearObstacles, viewpoint, heuristic);
+            return ExecAStar(firstNode, endPos, step, inertia, limitRect, nearObstacles, viewpointFunc, heuristicFunc);
         }
 
         private bool ExecAStar(AStarNode node, NodePoint endPos, double step, double inertia,
-            NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+            NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpointFunc, HeuristicFunc heuristicFunc)
         {
             if (obstacles != null && obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
             {
@@ -283,7 +278,7 @@ namespace ObjectAreaLibrary
                         && lastNode.NodePoint.Item1 != nodeVector)
                     {
                         var nd = node.Parent;
-                        if (ShortCut(lastNode.Parent, node, endPos, parentNodeVector, step, inertia, limitRect, obstacles, viewpoint, heuristic))
+                        if (ShortCut(lastNode.Parent, node, endPos, parentNodeVector, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc))
                         {
                             while (nd != lastNode)
                             {
@@ -296,7 +291,7 @@ namespace ObjectAreaLibrary
                     }
                 }
 
-                var newViewpPoints = viewpoint(nodePoint, step, limitRect, obstacles, null);
+                var newViewpPoints = viewpointFunc(nodePoint, step, limitRect, obstacles, null);
                 foreach (var newViewPoint in newViewpPoints)
                 {
                     var newNodeVector = newViewPoint.Item1;
@@ -304,7 +299,7 @@ namespace ObjectAreaLibrary
                     var newNode = NodeAt(newNodePos);
                     if (newNode == null)
                     {
-                        var hVal = heuristic(newNodePos, endPos);
+                        var hVal = heuristicFunc(newNodePos, endPos);
                         hVal -= nodeVector == newNodeVector ? inertia : 0;
                         newNode = CreatAStarNode(newViewPoint, hVal, GetBackward(newNodePos, endPos), parent: node);
                         AddNodes(newNode);
@@ -323,7 +318,7 @@ namespace ObjectAreaLibrary
         }
 
         private bool ShortCut(AStarNode nodeL, AStarNode nodeR, NodePoint goalPos, VectorType priorityVector, double step, double inertia,
-            NodeRect limitRect, IEnumerable<NodeRect> obstacles, Viewpoint viewpoint, Heuristic heuristic)
+            NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpoint, HeuristicFunc heuristic)
         {
             bool result = true;
             var node = nodeL;
@@ -358,6 +353,23 @@ namespace ObjectAreaLibrary
             }
 
             return result;
+        }
+
+        private NodeRect GetUnionRectOrDefaultRect(IEnumerable<NodeRect> rects, NodePoint defaultX, NodePoint defaultY)
+        {
+            var rect = new NodeRect(defaultX, defaultY);
+            if (rects != null)
+            {
+                if (rects.Count() > 0)
+                {
+                    rect = rects.First();
+                    foreach (var r in rects)
+                    {
+                        rect.Union(r);
+                    }
+                }
+            }
+            return rect;
         }
 
         private AStarNode GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection)
