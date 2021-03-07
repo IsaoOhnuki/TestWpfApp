@@ -190,16 +190,34 @@ namespace ObjectAreaLibrary
 
         public void Cancel()
         {
-            using var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString());
-            IsCanceled = true;
+            using (var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString()))
+            {
+                mutex.WaitOne();
+                try
+                {
+                    IsCanceled = true;
+                }
+                finally
+                {
+                    mutex.ReleaseMutex();
+                }
+            }
         }
 
         private bool Run(Func<bool> func)
         {
             using (var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString()))
             {
-                IsCanceled = false;
-                IsRunning = true;
+                mutex.WaitOne();
+                try
+                {
+                    IsCanceled = false;
+                    IsRunning = true;
+                }
+                finally
+                {
+                    mutex.ReleaseMutex();
+                }
             }
             var result = func();
             IsRunning = false;
