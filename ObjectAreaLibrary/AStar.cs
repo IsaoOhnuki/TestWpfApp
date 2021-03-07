@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows;
 
 namespace ObjectAreaLibrary
@@ -74,35 +75,25 @@ namespace ObjectAreaLibrary
         }
         public string VectorString()
         {
-            switch (NodePoint.Item1)
+            return NodePoint.Item1 switch
             {
-                case VectorType.LeftToRight:
-                    return "→";
-                case VectorType.TopToBottom:
-                    return "↓";
-                case VectorType.RightToLeft:
-                    return "←";
-                case VectorType.BottomToTop:
-                    return "↑";
-                default:
-                    throw new ArgumentException();
-            }
+                VectorType.LeftToRight => "→",
+                VectorType.TopToBottom => "↓",
+                VectorType.RightToLeft => "←",
+                VectorType.BottomToTop => "↑",
+                _ => throw new ArgumentException(),
+            };
         }
         public string ToString(ValueType type)
         {
-            switch (type)
+            return type switch
             {
-                case ValueType.Adopt:
-                    return AdoptString();
-                case ValueType.Forward:
-                    return ForwardString();
-                case ValueType.Vector:
-                    return VectorString();
-                case ValueType.Cost:
-                    return CostString();
-                default:
-                    return ToString();
-            }
+                ValueType.Adopt => AdoptString(),
+                ValueType.Forward => ForwardString(),
+                ValueType.Vector => VectorString(),
+                ValueType.Cost => CostString(),
+                _ => ToString(),
+            };
         }
         public override string ToString()
         {
@@ -161,15 +152,7 @@ namespace ObjectAreaLibrary
             return NodeCollection.ContainsKey(point) ? NodeCollection[point] : null;
         }
 
-        public IEnumerable<NodePoint> AdoptList()
-        {
-            return NodeCollection
-                .Where(_ => _.Value.Adopt)
-                .OrderBy(_ => _.Value.Index)
-                .Select(_ => _.Value.NodePoint.Item2);
-        }
-
-        public IEnumerable<NodePoint> AdoptList_()
+        private IEnumerable<NodePoint> AdoptList()
         {
             return NodeCollection
                 .Where(_ => _.Value.Adopt && (_.Value.Goal || _.Value.Parent == null || _.Value.Parent.NodePoint.Item1 != _.Value.NodePoint.Item1))
@@ -202,44 +185,69 @@ namespace ObjectAreaLibrary
             return string.Join("\r\n", strY);
         }
 
-        public bool Exec(VectorPos start, VectorPos end, double step, double inertia,
+        public bool IsCanceled { get; private set; }
+        public bool IsRunning { get; private set; }
+
+        public void Cancel()
+        {
+            using var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString());
+            IsCanceled = true;
+        }
+
+        private bool Run(Func<bool> func)
+        {
+            using (var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString()))
+            {
+                IsCanceled = false;
+                IsRunning = true;
+            }
+            var result = func();
+            IsRunning = false;
+            return result;
+        }
+
+        public IEnumerable<NodePoint> Exec(VectorPos start, VectorPos end, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpointFunc, HeuristicFunc heuristicFunc)
         {
             VectorType startVector = start.Item1;
             var startPos = start.Item2;
             var endPos = end.Item2;
-
+            var astarBounds = new NodeRect(startPos, endPos);
             if (limitRect == null)
             {
-                limitRect = GetUnionRectOrDefaultRect(obstacles, startPos, endPos);
-                limitRect.Inflate(inertia, inertia);
+                limitRect = GetUnionRectOrDefaultRect(obstacles, astarBounds);
+                limitRect.Inflate(step, step);
             }
 
             ClearNodes();
             SetGoal(endPos, step);
 
-            var astarBounds = NodeRect.Inflate(new NodeRect(startPos, endPos), step, step);
-
             var firstNode = CreatAStarNode(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
             AddNodes(firstNode);
 
-            var nearObstacles = new List<NodeRect>(obstacles.Where(_ => !NodeRect.Intersect(_, astarBounds).IsEmpty));
-            var falseObstacles = new List<NodeRect>(obstacles.Where(_ => NodeRect.Intersect(_, astarBounds).IsEmpty));
-            while (falseObstacles.Count() > 0)
+            if (!Run(() => ExecAStar(firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc)))
             {
-                var newList = falseObstacles.Where(_ => nearObstacles.Any(__ => !NodeRect.Intersect(_, __).IsEmpty)).ToArray();
-                if (newList.Count() == 0)
-                {
-                    break;
-                }
-                foreach (var newRect in newList)
-                {
-                    falseObstacles.Remove(newRect);
-                    nearObstacles.Add(newRect);
-                }
+                return null;
             }
 
-            return ExecAStar(firstNode, endPos, step, inertia, limitRect, nearObstacles, viewpointFunc, heuristicFunc);
+            return AdoptList();
+        }
+
+        private NodeRect GetUnionRectOrDefaultRect(IEnumerable<NodeRect> rects, NodeRect defaultRect)
+        {
+            var rect = defaultRect;
+            if (rects != null)
+            {
+                if (rects.Count() > 0)
+                {
+                    rect = rects.First();
+                    foreach (var r in rects)
+                    {
+                        rect.Union(r);
+                    }
+                }
+            }
+            return rect;
         }
 
         private bool ExecAStar(AStarNode node, NodePoint endPos, double step, double inertia,
@@ -254,7 +262,7 @@ namespace ObjectAreaLibrary
             while (node != null && !result)
             {
                 node.Inspected = true;
-                if (CheckGoal(node, endPos))
+                if (CheckGoal(node, endPos) || IsCanceled)
                 {
                     while (node != null)
                     {
@@ -306,6 +314,11 @@ namespace ObjectAreaLibrary
                     }
                 }
 
+                if (IsCanceled)
+                {
+                    break;
+                }
+
                 node = NodeCollection
                     .Select(_ => _.Value)
                     .Where(_ => !_.Inspected)
@@ -325,6 +338,12 @@ namespace ObjectAreaLibrary
             var endPos = nodeR.NodePoint.Item2;
             while (node != null)
             {
+                if (IsCanceled)
+                {
+                    result = false;
+                    break;
+                }
+
                 var nodePoint = node.NodePoint.Item2;
                 var viewpoints = viewpoint(nodePoint, step, limitRect, obstacles, priorityVector);
                 if (viewpoints.Count() == 0)
@@ -355,23 +374,6 @@ namespace ObjectAreaLibrary
             return result;
         }
 
-        private NodeRect GetUnionRectOrDefaultRect(IEnumerable<NodeRect> rects, NodePoint defaultX, NodePoint defaultY)
-        {
-            var rect = new NodeRect(defaultX, defaultY);
-            if (rects != null)
-            {
-                if (rects.Count() > 0)
-                {
-                    rect = rects.First();
-                    foreach (var r in rects)
-                    {
-                        rect.Union(r);
-                    }
-                }
-            }
-            return rect;
-        }
-
         private AStarNode GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection)
         {
             for (int idx = 0; node != null; ++idx)
@@ -388,19 +390,14 @@ namespace ObjectAreaLibrary
 
         private VectorDirection GetVectorDirection(VectorType vectorType)
         {
-            switch (vectorType)
+            return vectorType switch
             {
-                case VectorType.LeftToRight:
-                    return VectorDirection.Horizontal;
-                case VectorType.TopToBottom:
-                    return VectorDirection.Virtical;
-                case VectorType.RightToLeft:
-                    return VectorDirection.Horizontal;
-                case VectorType.BottomToTop:
-                    return VectorDirection.Virtical;
-                default:
-                    throw new ArgumentException();
-            }
+                VectorType.LeftToRight => VectorDirection.Horizontal,
+                VectorType.TopToBottom => VectorDirection.Virtical,
+                VectorType.RightToLeft => VectorDirection.Horizontal,
+                VectorType.BottomToTop => VectorDirection.Virtical,
+                _ => throw new ArgumentException(),
+            };
         }
 
         private VectorDirection OppositeVectorDirection(VectorType vectorType)
@@ -440,10 +437,10 @@ namespace ObjectAreaLibrary
         }
 
         private NodeRect _goal;
-        private void SetGoal(NodePoint endPos, double step)
+        private void SetGoal(NodePoint endPos, double inflate)
         {
             _goal = new NodeRect(endPos, new Size(1, 1));
-            _goal.Inflate(step, step);
+            _goal.Inflate(inflate, inflate);
         }
 
         private bool CheckGoal(AStarNode node, NodePoint endPos)

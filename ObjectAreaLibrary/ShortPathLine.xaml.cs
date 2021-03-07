@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -53,10 +54,66 @@ namespace ObjectAreaLibrary
 
         public AStarNode.ValueType CsvType { get; set; }
 
-        public string CSV { get => AStar.Instance.GetCsv((int)InertiaValue, CsvType); }
+        public string CSV { get => _astar?.GetCsv((int)InertiaValue, CsvType); }
 
         public bool Inertia { get; set; }
         public double InertiaValue { get; set; }
+
+        private AStar _astar;
+
+        //public async Task SetLineAsync(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
+        //{
+        //    double diff = shortPathLine.StrokeThickness;
+        //    double step = 10;
+        //    var bounds = new Rect(startPos, endPos);
+        //    var lineData = new PathGeometry();
+        //    var vector = GetFirstVector(startPos, endPos);
+
+        //    if (_astar != null)
+        //    {
+        //        _astar.CanselExec();
+        //    }
+        //    try
+        //    {
+        //        _astar = new AStar();
+        //        var linePos = await _astar.ExecAsync(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos),
+        //            step, Inertia ? InertiaValue : 0, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
+        //        if (_astar.IsCanceled)
+        //        {
+        //            return;
+        //        }
+
+        //        if (linePos != null && linePos.Count() > 0)
+        //        {
+        //            bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
+
+        //            PathFigure figure = new PathFigure();
+        //            var firstPos = linePos.FirstOrDefault();
+        //            if (firstPos != null)
+        //            {
+        //                var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
+        //                figure.StartPoint = firstPos - diffPos;
+        //                foreach (var pos in linePos)
+        //                {
+        //                    figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
+        //                }
+        //                figure.Segments.RemoveAt(0);
+        //            }
+
+        //            lineData.Figures.Add(figure);
+        //        }
+        //    }
+        //    catch (Exception)
+        //    {
+        //        return;
+        //    }
+        //    ShortPathSetter = lineData;
+
+        //    Left = bounds.Left - diff;
+        //    Top = bounds.Top - diff;
+        //    Width = bounds.Width + diff + diff;
+        //    Height = bounds.Height + diff + diff;
+        //}
 
         public void SetLine(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
         {
@@ -65,30 +122,31 @@ namespace ObjectAreaLibrary
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
             var vector = GetFirstVector(startPos, endPos);
-            var result = AStar.Instance.Exec(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos), step, Inertia ? InertiaValue : 0, limitRect, obstacles, AStar.Viewpoint, AStar.Heuristic);
-            if (result)
+
+            var astar = new AStar();
+            var linePos = astar.Exec(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos),
+                step, Inertia ? InertiaValue : 0, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
+
+            if (linePos != null && linePos.Count() > 0)
             {
-                var linePos = AStar.Instance.AdoptList_();
-                if (linePos.Count() > 0)
+                bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
+
+                PathFigure figure = new PathFigure();
+                var firstPos = linePos.FirstOrDefault();
+                if (firstPos != null)
                 {
-                    bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
-
-                    PathFigure figure = new PathFigure();
-                    var firstPos = linePos.FirstOrDefault();
-                    if (firstPos != null)
+                    var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
+                    figure.StartPoint = firstPos - diffPos;
+                    foreach (var pos in linePos)
                     {
-                        var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
-                        figure.StartPoint = firstPos - diffPos;
-                        foreach (var pos in linePos)
-                        {
-                            figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
-                        }
-                        figure.Segments.RemoveAt(0);
+                        figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
                     }
-
-                    lineData.Figures.Add(figure);
+                    figure.Segments.RemoveAt(0);
                 }
+
+                lineData.Figures.Add(figure);
             }
+
             ShortPathSetter = lineData;
 
             Left = bounds.Left - diff;
@@ -119,6 +177,26 @@ namespace ObjectAreaLibrary
             }
 
             return type;
+        }
+
+        private IEnumerable<Rect> GetNearObstacles(Rect rect, IEnumerable<Rect> obstacles, double inflate)
+        {
+            var nearObstacles = new List<Rect>(obstacles.Where(_ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmpty));
+            var farObstacles = new List<Rect>(obstacles.Where(_ => Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmpty));
+            while (farObstacles.Count() > 0)
+            {
+                var newList = farObstacles.Where(_ => nearObstacles.Any(__ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(__, inflate, inflate)).IsEmpty)).ToArray();
+                if (newList.Count() == 0)
+                {
+                    break;
+                }
+                foreach (var newRect in newList)
+                {
+                    farObstacles.Remove(newRect);
+                    nearObstacles.Add(newRect);
+                }
+            }
+            return nearObstacles;
         }
     }
 }
