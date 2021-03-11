@@ -513,17 +513,17 @@ namespace ObjectAreaLibrary
             return false;
         }
 
-        private NodeRect _goal;
+        private NodeRect GoalPoint;
         private void SetGoal(NodePoint endPos, double inflate)
         {
-            _goal = new NodeRect(endPos, new Size(1, 1));
-            _goal.Inflate(inflate, inflate);
+            GoalPoint = new NodeRect(endPos, new Size(1, 1));
+            GoalPoint.Inflate(inflate, inflate);
         }
 
         private bool CheckGoal(AStarNode node, NodePoint endPos)
         {
             var nodePos = node.NodePoint.Item2;
-            var result = _goal.Contains(nodePos);
+            var result = GoalPoint.Contains(nodePos);
             if (result)
             {
                 var vctType = node.NodePoint.Item1;
