@@ -181,7 +181,7 @@ namespace TestCoreApp
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
+            //_shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
 
             _item1.LocationChangedEvent += Item_LocationChanged;
             _item1.SizeChanged += Item_SizeChanged;
@@ -208,13 +208,21 @@ namespace TestCoreApp
             }
         }
 
-        private void Item_LocationChanged(IAreaContents areaitem, Point value)
+        private async void Item_LocationChanged(IAreaContents areaitem, Point value)
         {
             if (areaitem is MockAreaContents mock)
             {
-                _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
+                await _shortPathLine.SetLineAsync(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(), _obstacles.Select(_ => _.Bounds).ToArray());
             }
         }
+
+        //private void Item_LocationChanged(IAreaContents areaitem, Point value)
+        //{
+        //    if (areaitem is MockAreaContents mock)
+        //    {
+        //        _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(), _obstacles.Select(_ => _.Bounds).ToArray());
+        //    }
+        //}
 
         public static readonly DependencyProperty InertiaProperty = DependencyProperty.Register(
             nameof(Inertia),

@@ -59,75 +59,81 @@ namespace ObjectAreaLibrary
         public bool Inertia { get; set; }
         public double InertiaValue { get; set; }
 
-        private AStar _astar;
+        private IEnumerable<Point> ExecAStar(Point start, Point end, Rect limitRect, IEnumerable<Rect> obstacles, out AStar astar)
+        {
+            var vector = GetFirstVector(start, end);
+            var startPos = new Tuple<VectorType, Point>(vector, start);
+            var endPos = new Tuple<VectorType, Point>(VectorType.LeftToRight, end);
+            double step = 10;
+            var inertia = Inertia ? InertiaValue : 0;
 
-        //public async Task SetLineAsync(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
-        //{
-        //    double diff = shortPathLine.StrokeThickness;
-        //    double step = 10;
-        //    var bounds = new Rect(startPos, endPos);
-        //    var lineData = new PathGeometry();
-        //    var vector = GetFirstVector(startPos, endPos);
-
-        //    if (_astar != null)
-        //    {
-        //        _astar.CanselExec();
-        //    }
-        //    try
-        //    {
-        //        _astar = new AStar();
-        //        var linePos = await _astar.ExecAsync(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos),
-        //            step, Inertia ? InertiaValue : 0, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
-        //        if (_astar.IsCanceled)
-        //        {
-        //            return;
-        //        }
-
-        //        if (linePos != null && linePos.Count() > 0)
-        //        {
-        //            bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
-
-        //            PathFigure figure = new PathFigure();
-        //            var firstPos = linePos.FirstOrDefault();
-        //            if (firstPos != null)
-        //            {
-        //                var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
-        //                figure.StartPoint = firstPos - diffPos;
-        //                foreach (var pos in linePos)
-        //                {
-        //                    figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
-        //                }
-        //                figure.Segments.RemoveAt(0);
-        //            }
-
-        //            lineData.Figures.Add(figure);
-        //        }
-        //    }
-        //    catch (Exception)
-        //    {
-        //        return;
-        //    }
-        //    ShortPathSetter = lineData;
-
-        //    Left = bounds.Left - diff;
-        //    Top = bounds.Top - diff;
-        //    Width = bounds.Width + diff + diff;
-        //    Height = bounds.Height + diff + diff;
-        //}
+            astar = new AStar();
+            return astar.Exec(startPos, endPos, step, inertia, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
+        }
 
         public void SetLine(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
         {
             double diff = shortPathLine.StrokeThickness;
-            double step = 10;
             var bounds = new Rect(startPos, endPos);
             var lineData = new PathGeometry();
-            var vector = GetFirstVector(startPos, endPos);
 
-            var astar = new AStar();
-            var linePos = astar.Exec(new Tuple<VectorType, Point>(vector, startPos), new Tuple<VectorType, Point>(VectorType.LeftToRight, endPos),
-                step, Inertia ? InertiaValue : 0, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
+            var linePos = ExecAStar(startPos, endPos, limitRect, obstacles.ToArray(), out _astar);
+            if (linePos.Count() > 0)
+            {
+                bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
 
-            if (linePos != null && linePos.Count() > 0)
+                PathFigure figure = new PathFigure();
+                var firstPos = linePos.FirstOrDefault();
+                if (firstPos != null)
+                {
+                    var diffPos = new Vector(bounds.Left - diff, bounds.Top - diff);
+                    figure.StartPoint = firstPos - diffPos;
+                    foreach (var pos in linePos)
+                    {
+                        figure.Segments.Add(new LineSegment() { Point = pos - diffPos });
+                    }
+                    figure.Segments.RemoveAt(0);
+                }
+
+                lineData.Figures.Add(figure);
+            }
+
+            ShortPathSetter = lineData;
+
+            Left = bounds.Left - diff;
+            Top = bounds.Top - diff;
+            Width = bounds.Width + diff + diff;
+            Height = bounds.Height + diff + diff;
+        }
+
+        private AStar _astar;
+        private async Task<IEnumerable<Point>> ExecAStarAsync(Point start, Point end, Rect limitRect, IEnumerable<Rect> obstacles)
+        {
+            if (_astar != null)
+            {
+                _astar.Cancel();
+            }
+
+            var vector = GetFirstVector(start, end);
+            var startPos = new Tuple<VectorType, Point>(vector, start);
+            var endPos = new Tuple<VectorType, Point>(VectorType.LeftToRight, end);
+            double step = 10;
+            var inertia = Inertia ? InertiaValue : 0;
+
+            _astar = new AStar();
+            var linePos = await _astar.ExecAsynk(startPos, endPos, step, inertia, limitRect, obstacles.ToArray(), AStar.Viewpoint, AStar.Heuristic);
+            _astar = null;
+            return linePos;
+        }
+
+        public async Task SetLineAsync(Point startPos, Point endPos, Rect limitRect, IEnumerable<Rect> obstacles)
+        {
+            double diff = shortPathLine.StrokeThickness;
+            var bounds = new Rect(startPos, endPos);
+            var lineData = new PathGeometry();
+
+            var linePos = await ExecAStarAsync(startPos, endPos, limitRect, obstacles.ToArray());
+            if (linePos.Count() > 0)
             {
                 bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
 

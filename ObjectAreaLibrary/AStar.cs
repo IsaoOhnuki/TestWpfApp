@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace ObjectAreaLibrary
@@ -188,9 +189,10 @@ namespace ObjectAreaLibrary
         public bool IsCanceled { get; private set; }
         public bool IsRunning { get; private set; }
 
+        private readonly string _cancelMutex = "CancelLock";
         public void Cancel()
         {
-            using (var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString()))
+            using (var mutex = new Mutex(false, _cancelMutex + nameof(AStar) + GetHashCode().ToString()))
             {
                 mutex.WaitOne();
                 try
@@ -204,24 +206,36 @@ namespace ObjectAreaLibrary
             }
         }
 
+        private readonly string _runningMutex = "RunningLock";
         private bool Run(Func<bool> func)
         {
-            using (var mutex = new Mutex(false, "CancelLock" + nameof(AStar) + GetHashCode().ToString()))
+            using (var mutexRun = new Mutex(false, _runningMutex + nameof(AStar) + GetHashCode().ToString()))
             {
-                mutex.WaitOne();
+                mutexRun.WaitOne();
                 try
                 {
-                    IsCanceled = false;
-                    IsRunning = true;
+                    using (var mutexCancel = new Mutex(false, _cancelMutex + nameof(AStar) + GetHashCode().ToString()))
+                    {
+                        mutexCancel.WaitOne();
+                        try
+                        {
+                            IsCanceled = false;
+                            IsRunning = true;
+                        }
+                        finally
+                        {
+                            mutexCancel.ReleaseMutex();
+                        }
+                    }
+                    var result = func();
+                    IsRunning = false;
+                    return result;
                 }
                 finally
                 {
-                    mutex.ReleaseMutex();
+                    mutexRun.ReleaseMutex();
                 }
             }
-            var result = func();
-            IsRunning = false;
-            return result;
         }
 
         public IEnumerable<NodePoint> Exec(VectorPos start, VectorPos end, double step, double inertia,
@@ -245,7 +259,35 @@ namespace ObjectAreaLibrary
 
             if (!Run(() => ExecAStar(firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc)))
             {
-                return null;
+                return Enumerable.Empty<NodePoint>();
+            }
+
+            return AdoptList();
+        }
+
+        public async Task<IEnumerable<NodePoint>> ExecAsynk(VectorPos start, VectorPos end, double step, double inertia,
+            NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpointFunc, HeuristicFunc heuristicFunc)
+        {
+            VectorType startVector = start.Item1;
+            var startPos = start.Item2;
+            var endPos = end.Item2;
+            var astarBounds = new NodeRect(startPos, endPos);
+            if (limitRect == null)
+            {
+                limitRect = GetUnionRectOrDefaultRect(obstacles, astarBounds);
+                limitRect.Inflate(step, step);
+            }
+
+            ClearNodes();
+            SetGoal(endPos, step);
+
+            var firstNode = CreatAStarNode(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
+            AddNodes(firstNode);
+
+            var result = await Task.Run(() => Run(() => ExecAStar(firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc)));
+            if (!result)
+            {
+                return Enumerable.Empty<NodePoint>();
             }
 
             return AdoptList();
@@ -276,6 +318,11 @@ namespace ObjectAreaLibrary
                 return false;
             }
 
+            var nodes = NodeCollection
+                .Where(_ => !_.Value.Inspected)
+                .Select(_ => _.Value)
+                .OrderBy(_ => _.Cost)
+                .ThenByDescending(_ => _.Backward);
             var result = false;
             while (node != null && !result)
             {
@@ -298,9 +345,8 @@ namespace ObjectAreaLibrary
                 if (parentNode != null)
                 {
                     var parentNodeVector = parentNode.NodePoint.Item1;
-                    AStarNode lastNode;
                     if (!EqualVectorDirection(nodeVector, parentNodeVector)
-                        && (lastNode = GetLastVectorDirection(parentNode, GetVectorDirection(nodeVector))) != null
+                        && GetLastVectorDirection(parentNode, GetVectorDirection(nodeVector), out AStarNode lastNode)
                         && lastNode.NodePoint.Item1 != nodeVector)
                     {
                         var nd = node.Parent;
@@ -317,8 +363,9 @@ namespace ObjectAreaLibrary
                     }
                 }
 
-                var newViewpPoints = viewpointFunc(nodePoint, step, limitRect, obstacles, null);
-                foreach (var newViewPoint in newViewpPoints)
+                var newViewPoints = viewpointFunc(nodePoint, step, limitRect, obstacles, null);
+                var bestNode = node;
+                foreach (var newViewPoint in newViewPoints)
                 {
                     var newNodeVector = newViewPoint.Item1;
                     var newNodePos = newViewPoint.Item2;
@@ -330,6 +377,10 @@ namespace ObjectAreaLibrary
                         newNode = CreatAStarNode(newViewPoint, hVal, GetBackward(newNodePos, endPos), parent: node);
                         AddNodes(newNode);
                     }
+                    if (!newNode.Inspected && newNode.Cost < bestNode.Cost && newNode.Backward > bestNode.Backward)
+                    {
+                        bestNode = newNode;
+                    }
                 }
 
                 if (IsCanceled)
@@ -337,12 +388,19 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                node = NodeCollection
-                    .Select(_ => _.Value)
-                    .Where(_ => !_.Inspected)
-                    .OrderBy(_ => _.Cost)
-                    .ThenByDescending(_ => _.Backward)
-                    .FirstOrDefault();
+                if (!bestNode.Inspected)
+                {
+                    node = bestNode;
+                }
+                else
+                {
+                    nodes = NodeCollection
+                        .Where(_ => !_.Value.Inspected)
+                        .Select(_ => _.Value)
+                        .OrderBy(_ => _.Cost)
+                        .ThenByDescending(_ => _.Backward);
+                    node = nodes.FirstOrDefault();
+                }
             }
 
             return result;
@@ -392,18 +450,19 @@ namespace ObjectAreaLibrary
             return result;
         }
 
-        private AStarNode GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection)
+        private bool GetLastVectorDirection(AStarNode node, VectorDirection vectorDirection, out AStarNode result)
         {
-            for (int idx = 0; node != null; ++idx)
+            result = node;
+            for (int idx = 0; result != null; ++idx)
             {
-                var nodeVector = node.NodePoint.Item1;
+                var nodeVector = result.NodePoint.Item1;
                 if (EqualVectorDirection(nodeVector, vectorDirection))
                 {
                     break;
                 }
-                node = node.Parent;
+                result = result.Parent;
             }
-            return node;
+            return result != null;
         }
 
         private VectorDirection GetVectorDirection(VectorType vectorType)
