@@ -158,7 +158,7 @@ namespace ObjectAreaLibrary
             return NodeCollection
                 .Where(_ => _.Value.Adopt && (_.Value.Goal || _.Value.Parent == null || _.Value.Parent.NodePoint.Item1 != _.Value.NodePoint.Item1))
                 .OrderBy(_ => _.Value.Index)
-                .Select(_ => _.Value.Goal || _.Value.Parent == null  ? _.Value.NodePoint.Item2 : _.Value.Parent.NodePoint.Item2);
+                .Select(_ => _.Value.Goal || _.Value.Parent == null ? _.Value.NodePoint.Item2 : _.Value.Parent.NodePoint.Item2);
         }
 
         public string GetCsv(int step, AStarNode.ValueType csvType)
