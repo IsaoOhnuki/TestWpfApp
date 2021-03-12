@@ -187,11 +187,11 @@ namespace ObjectAreaLibrary
 
         private IEnumerable<Rect> GetNearObstacles(Rect rect, IEnumerable<Rect> obstacles, double inflate)
         {
-            var nearObstacles = new List<Rect>(obstacles.Where(_ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmpty));
-            var farObstacles = new List<Rect>(obstacles.Where(_ => Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmpty));
+            var nearObstacles = new List<Rect>(obstacles.Where(_ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmptyRect()));
+            var farObstacles = new List<Rect>(obstacles.Where(_ => Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(rect, inflate, inflate)).IsEmptyRect()));
             while (farObstacles.Count() > 0)
             {
-                var newList = farObstacles.Where(_ => nearObstacles.Any(__ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(__, inflate, inflate)).IsEmpty)).ToArray();
+                var newList = farObstacles.Where(_ => nearObstacles.Any(__ => !Rect.Intersect(Rect.Inflate(_, inflate, inflate), Rect.Inflate(__, inflate, inflate)).IsEmptyRect())).ToArray();
                 if (newList.Count() == 0)
                 {
                     break;

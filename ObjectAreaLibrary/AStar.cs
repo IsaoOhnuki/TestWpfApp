@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,6 +14,45 @@ namespace ObjectAreaLibrary
     using VectorPos = Tuple<VectorType, Point>;
     using ViewpointFunc = Func<Point, double, Rect, IEnumerable<Rect>, VectorType?, IEnumerable<Tuple<VectorType, Point>>>;
     using HeuristicFunc = Func<Point, Point, double>;
+
+    public class MutexLocker
+    {
+        public static void Locked(string mutexStr, Action action)
+        {
+            using var mutex = new Mutex(false, mutexStr);
+            mutex.WaitOne();
+            try
+            {
+                action();
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+
+        public static T Locked<T>(string mutexStr, Func<T> func)
+        {
+            using var mutex = new Mutex(false, mutexStr);
+            mutex.WaitOne();
+            try
+            {
+                return func();
+            }
+            finally
+            {
+                mutex.ReleaseMutex();
+            }
+        }
+    }
+
+    public static class NodeRectExtension
+    {
+        public static bool IsEmptyRect(this NodeRect rect)
+        {
+            return rect.Width == 0 || rect.Height == 0;
+        }
+    }
 
     public enum VectorType
     {
@@ -112,6 +152,58 @@ namespace ObjectAreaLibrary
         #endregion
     }
 
+    public struct AStarKey : IComparer<AStarKey>, IComparable<AStarKey>
+    {
+        public double Cost;
+        public double Backward;
+        public NodePoint NodePoint;
+
+        #region Comparison
+        public static bool operator <(AStarKey l, AStarKey r)
+        {
+            return l.Cost < r.Cost && l.Backward > r.Backward;
+        }
+
+        public static bool operator >(AStarKey l, AStarKey r)
+        {
+            return l.Cost > r.Cost || l.Backward < r.Backward;
+        }
+
+        public static bool operator ==(AStarKey l, AStarKey r)
+        {
+            return l.Cost == r.Cost && l.Backward == r.Backward;
+        }
+
+        public static bool operator !=(AStarKey l, AStarKey r)
+        {
+            return l.Cost != r.Cost || l.Backward != r.Backward;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return this == (AStarKey)obj;
+        }
+
+        public override int GetHashCode()
+        {
+            return NodePoint.GetHashCode();
+        }
+
+        public int Compare([AllowNull] AStarKey x, [AllowNull] AStarKey y)
+        {
+            if (x < y)
+                return -1;
+            else
+                return 1;
+        }
+
+        public int CompareTo([AllowNull] AStarKey other)
+        {
+            return Compare(this, other);
+        }
+        #endregion
+    }
+
     public class AStar
     {
         private static AStar _instance;
@@ -157,8 +249,10 @@ namespace ObjectAreaLibrary
         {
             return NodeCollection
                 .Where(_ => _.Value.Adopt && (_.Value.Goal || _.Value.Parent == null || _.Value.Parent.NodePoint.Item1 != _.Value.NodePoint.Item1))
+                //.Where(_ => _.Value.Adopt)
                 .OrderBy(_ => _.Value.Index)
                 .Select(_ => _.Value.Goal || _.Value.Parent == null ? _.Value.NodePoint.Item2 : _.Value.Parent.NodePoint.Item2);
+                //.Select(_ => _.Value.NodePoint.Item2);
         }
 
         public string GetCsv(int step, AStarNode.ValueType csvType)
@@ -192,50 +286,22 @@ namespace ObjectAreaLibrary
         private readonly string _cancelMutex = "CancelLock";
         public void Cancel()
         {
-            using (var mutex = new Mutex(false, _cancelMutex + nameof(AStar) + GetHashCode().ToString()))
-            {
-                mutex.WaitOne();
-                try
-                {
-                    IsCanceled = true;
-                }
-                finally
-                {
-                    mutex.ReleaseMutex();
-                }
-            }
+            MutexLocker.Locked(_cancelMutex + nameof(AStar) + GetHashCode().ToString(), () => IsCanceled = true);
         }
 
         private readonly string _runningMutex = "RunningLock";
         private bool Run(Func<bool> func)
         {
-            using (var mutexRun = new Mutex(false, _runningMutex + nameof(AStar) + GetHashCode().ToString()))
-            {
-                mutexRun.WaitOne();
-                try
-                {
-                    using (var mutexCancel = new Mutex(false, _cancelMutex + nameof(AStar) + GetHashCode().ToString()))
-                    {
-                        mutexCancel.WaitOne();
-                        try
-                        {
-                            IsCanceled = false;
-                            IsRunning = true;
-                        }
-                        finally
-                        {
-                            mutexCancel.ReleaseMutex();
-                        }
-                    }
-                    var result = func();
-                    IsRunning = false;
-                    return result;
-                }
-                finally
-                {
-                    mutexRun.ReleaseMutex();
-                }
-            }
+            bool runResult = MutexLocker.Locked(_runningMutex + nameof(AStar) + GetHashCode().ToString(), () => {
+                MutexLocker.Locked(_cancelMutex + nameof(AStar) + GetHashCode().ToString(), () => {
+                    IsCanceled = false;
+                    IsRunning = true;
+                });
+                var result = func();
+                IsRunning = false;
+                return result;
+            });
+            return runResult;
         }
 
         public IEnumerable<NodePoint> Exec(VectorPos start, VectorPos end, double step, double inertia,
@@ -245,9 +311,10 @@ namespace ObjectAreaLibrary
             var startPos = start.Item2;
             var endPos = end.Item2;
             var astarBounds = new NodeRect(startPos, endPos);
-            if (limitRect == null)
+            if (limitRect.IsEmptyRect())
             {
                 limitRect = GetUnionRectOrDefaultRect(obstacles, astarBounds);
+                limitRect.Union(astarBounds);
                 limitRect.Inflate(step, step);
             }
 
@@ -272,9 +339,10 @@ namespace ObjectAreaLibrary
             var startPos = start.Item2;
             var endPos = end.Item2;
             var astarBounds = new NodeRect(startPos, endPos);
-            if (limitRect == null)
+            if (limitRect.IsEmptyRect())
             {
                 limitRect = GetUnionRectOrDefaultRect(obstacles, astarBounds);
+                limitRect.Union(astarBounds);
                 limitRect.Inflate(step, step);
             }
 
@@ -318,6 +386,8 @@ namespace ObjectAreaLibrary
                 return false;
             }
 
+            var sortedNodes = new SortedList<AStarKey, AStarNode>();
+            sortedNodes.Add(new AStarKey() { Cost = node.Cost, Backward = node.Backward, NodePoint = node.NodePoint.Item2 }, node);
             var nodes = NodeCollection
                 .Where(_ => !_.Value.Inspected)
                 .Select(_ => _.Value)
@@ -364,7 +434,6 @@ namespace ObjectAreaLibrary
                 }
 
                 var newViewPoints = viewpointFunc(nodePoint, step, limitRect, obstacles, null);
-                var bestNode = node;
                 foreach (var newViewPoint in newViewPoints)
                 {
                     var newNodeVector = newViewPoint.Item1;
@@ -377,10 +446,14 @@ namespace ObjectAreaLibrary
                         newNode = CreatAStarNode(newViewPoint, hVal, GetBackward(newNodePos, endPos), parent: node);
                         AddNodes(newNode);
                     }
-                    if (!newNode.Inspected && newNode.Cost < bestNode.Cost && newNode.Backward > bestNode.Backward)
-                    {
-                        bestNode = newNode;
-                    }
+                    sortedNodes.Add(
+                        new AStarKey()
+                        {
+                            Cost = newNode.Cost,
+                            Backward = newNode.Backward,
+                            NodePoint = newNode.NodePoint.Item2,
+                        },
+                        newNode);
                 }
 
                 if (IsCanceled)
@@ -388,9 +461,10 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                if (!bestNode.Inspected)
+                var first = sortedNodes.FirstOrDefault(_ => !_.Value.Inspected);
+                if (!first.Equals(default(KeyValuePair)))
                 {
-                    node = bestNode;
+                    node = first.Value;
                 }
                 else
                 {
@@ -513,17 +587,17 @@ namespace ObjectAreaLibrary
             return false;
         }
 
-        private NodeRect GoalPoint;
+        private NodeRect _goalPoint;
         private void SetGoal(NodePoint endPos, double inflate)
         {
-            GoalPoint = new NodeRect(endPos, new Size(1, 1));
-            GoalPoint.Inflate(inflate, inflate);
+            _goalPoint = new NodeRect(endPos, new Size(1, 1));
+            _goalPoint.Inflate(inflate, inflate);
         }
 
         private bool CheckGoal(AStarNode node, NodePoint endPos)
         {
             var nodePos = node.NodePoint.Item2;
-            var result = GoalPoint.Contains(nodePos);
+            var result = _goalPoint.Contains(nodePos);
             if (result)
             {
                 var vctType = node.NodePoint.Item1;
@@ -563,7 +637,7 @@ namespace ObjectAreaLibrary
 
         public static IEnumerable<VectorPos> Viewpoint(NodePoint point, double step, NodeRect limitRect, IEnumerable<NodeRect> obstacles, VectorType? priorityVector = null)
         {
-            bool noLimmit = limitRect.Width == 0 || limitRect.Height == 0;
+            bool noLimmit = limitRect.IsEmptyRect();
             var rectContains = obstacles != null && obstacles.Count() > 0;
             List<VectorPos> ret = new List<VectorPos>();
             if ((!priorityVector.HasValue || priorityVector == VectorType.LeftToRight)
