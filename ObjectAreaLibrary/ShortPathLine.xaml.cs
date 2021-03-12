@@ -54,7 +54,7 @@ namespace ObjectAreaLibrary
 
         public AStarNode.ValueType CsvType { get; set; }
 
-        public string CSV { get => _astar?.GetCsv((int)InertiaValue, CsvType); }
+        //public string CSV { get => _astar?.GetCsv((int)InertiaValue, CsvType); }
 
         public bool Inertia { get; set; }
         public double InertiaValue { get; set; }
@@ -78,7 +78,7 @@ namespace ObjectAreaLibrary
             var lineData = new PathGeometry();
 
             var linePos = ExecAStar(startPos, endPos, limitRect, obstacles.ToArray(), out _astar);
-            if (linePos.Count() > 0)
+            if (linePos.Count() > 0 && linePos.First() == startPos && linePos.Last() == endPos)
             {
                 bounds = new Rect(new Point(linePos.Min(_ => _.X), linePos.Min(_ => _.Y)), new Point(linePos.Max(_ => _.X), linePos.Max(_ => _.Y)));
 
@@ -96,6 +96,12 @@ namespace ObjectAreaLibrary
                 }
 
                 lineData.Figures.Add(figure);
+
+                BorderBrush = Brushes.Black;
+            }
+            else
+            {
+                BorderBrush = Brushes.Red;
             }
 
             ShortPathSetter = lineData;
@@ -151,6 +157,12 @@ namespace ObjectAreaLibrary
                 }
 
                 lineData.Figures.Add(figure);
+
+                BorderBrush = Brushes.Black;
+            }
+            else
+            {
+                BorderBrush = Brushes.Red;
             }
 
             ShortPathSetter = lineData;

@@ -181,7 +181,7 @@ namespace TestCoreApp
 
             _shortPathLine = new ShortPathLine();
             contentsArea.ContentsCanvas.Children.Add(_shortPathLine);
-            //_shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
+            _shortPathLine.SetLine(new Point(_item1.Left, _item1.Top), new Point(_item2.Left, _item2.Top), new Rect(new Point(0, 0), new Point(0, 0)), _obstacles.Select(_ => _.Bounds));
 
             _item1.LocationChangedEvent += Item_LocationChanged;
             _item1.SizeChanged += Item_SizeChanged;
@@ -252,22 +252,22 @@ namespace TestCoreApp
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            SaveFileDialog sfd = new SaveFileDialog();
-            var filename = DateTime.Now.ToString("yyyyMMddHHmmss");
-            if (CSVType != AStarNode.ValueType.None)
-            {
-                filename += "_" + CSVType.ToString();
-            }
-            sfd.FileName = filename + ".csv";
-            var ret = sfd.ShowDialog();
-            if (ret.HasValue && ret.Value)
-            {
-                var csv = _shortPathLine.CSV;
-                var fs = new StreamWriter(sfd.FileName, false, Encoding.UTF8);
-                fs.WriteLine(csv);
-                fs.Close();
-            }
-            MessageBox.Show("CSVファイルが出力されました。");
+            //SaveFileDialog sfd = new SaveFileDialog();
+            //var filename = DateTime.Now.ToString("yyyyMMddHHmmss");
+            //if (CSVType != AStarNode.ValueType.None)
+            //{
+            //    filename += "_" + CSVType.ToString();
+            //}
+            //sfd.FileName = filename + ".csv";
+            //var ret = sfd.ShowDialog();
+            //if (ret.HasValue && ret.Value)
+            //{
+            //    var csv = _shortPathLine.CSV;
+            //    var fs = new StreamWriter(sfd.FileName, false, Encoding.UTF8);
+            //    fs.WriteLine(csv);
+            //    fs.Close();
+            //}
+            //MessageBox.Show("CSVファイルが出力されました。");
         }
 
         public static readonly DependencyProperty CSVTypeProperty = DependencyProperty.Register(
