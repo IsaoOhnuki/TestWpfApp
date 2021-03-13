@@ -95,11 +95,11 @@ namespace ObjectAreaLibrary
             }
 
             AStarNodeCollection aStarCollection = new AStarNodeCollection();
-            aStarCollection.ClearNodes();
+            aStarCollection.Clear();
             SetGoal(endPos, step);
 
-            var firstNode = aStarCollection.CreatAStarNode(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
-            aStarCollection.AddNodes(firstNode);
+            var firstNode = AStarNodeCollection.Create(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
+            aStarCollection.Add(firstNode);
 
             if (Run(() => ExecAStar(aStarCollection, firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc)))
             {
@@ -123,22 +123,22 @@ namespace ObjectAreaLibrary
                 limitRect.Inflate(step, step);
             }
 
-            AStarNodeCollection aStarCollection = new AStarNodeCollection();
-            aStarCollection.ClearNodes();
+            AStarNodeCollection astarCollection = new AStarNodeCollection();
+            astarCollection.Clear();
             SetGoal(endPos, step);
 
-            var firstNode = aStarCollection.CreatAStarNode(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
-            aStarCollection.AddNodes(firstNode);
+            var firstNode = AStarNodeCollection.Create(new VectorPos(startVector, startPos), heuristicFunc(startPos, endPos), GetBackward(startPos, endPos));
+            astarCollection.Add(firstNode);
 
-            if (await Task.Run(() => Run(() => ExecAStar(aStarCollection, firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc))))
+            if (await Task.Run(() => Run(() => ExecAStar(astarCollection, firstNode, endPos, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc))))
             {
-                return aStarCollection.AdoptList();
+                return astarCollection.AdoptList();
             }
 
             return Enumerable.Empty<NodePoint>();
         }
 
-        private bool ExecAStar(AStarNodeCollection aStarCollection, AStarNode node, NodePoint endPos, double step, double inertia,
+        private bool ExecAStar(AStarNodeCollection astarCollection, AStarNode node, NodePoint endPos, double step, double inertia,
             NodeRect limitRect, IEnumerable<NodeRect> obstacles, ViewpointFunc viewpointFunc, HeuristicFunc heuristicFunc)
         {
             if (obstacles != null && obstacles.Any(_ => _.Contains(node.NodePoint.Item2) || _.Contains(endPos)))
@@ -150,16 +150,12 @@ namespace ObjectAreaLibrary
             {
                 { new AStarKey() { Cost = node.Cost, Backward = node.Backward, NodePoint = node.NodePoint.Item2 }, node }
             };
-            var nodes = aStarCollection.Collection
-                .Where(_ => !_.Value.Inspected)
-                .Select(_ => _.Value)
-                .OrderBy(_ => _.Cost)
-                .ThenByDescending(_ => _.Backward);
+            var nodes = astarCollection.Sort();
             var result = false;
             while (node != null && !result)
             {
                 node.Inspected = true;
-                if (CheckGoal(aStarCollection, node, endPos) || IsCanceled)
+                if (CheckGoal(astarCollection, node, endPos) || IsCanceled)
                 {
                     while (node != null)
                     {
@@ -170,8 +166,8 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                var nodeVector = node.NodePoint.Item1;
-                var nodePoint = node.NodePoint.Item2;
+                var nodeVector = node.Vector;
+                var nodePoint = node.Point;
 
                 var parentNode = node.Parent;
                 if (parentNode != null)
@@ -182,15 +178,15 @@ namespace ObjectAreaLibrary
                         && lastNode.NodePoint.Item1 != nodeVector)
                     {
                         var nd = node.Parent;
-                        if (ShortCut(aStarCollection, lastNode.Parent, node, endPos, parentNodeVector, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc))
+                        if (ShortCut(astarCollection, lastNode.Parent, node, endPos, parentNodeVector, step, inertia, limitRect, obstacles, viewpointFunc, heuristicFunc))
                         {
                             while (nd != lastNode)
                             {
                                 nd.Forward += inertia;
                                 nd = nd.Parent;
                             }
-                            nodeVector = node.NodePoint.Item1;
-                            nodePoint = node.NodePoint.Item2;
+                            nodeVector = node.Vector;
+                            nodePoint = node.Point;
                         }
                     }
                 }
@@ -200,22 +196,14 @@ namespace ObjectAreaLibrary
                 {
                     var newNodeVector = newViewPoint.Item1;
                     var newNodePos = newViewPoint.Item2;
-                    var newNode = aStarCollection.NodeAt(newNodePos);
+                    var newNode = astarCollection.NodeAt(newNodePos);
                     if (newNode == null)
                     {
                         var hVal = heuristicFunc(newNodePos, endPos);
                         hVal -= nodeVector == newNodeVector ? inertia : 0;
-                        newNode = aStarCollection.CreatAStarNode(newViewPoint, hVal, GetBackward(newNodePos, endPos), parent: node);
-                        aStarCollection.AddNodes(newNode);
+                        newNode = AStarNodeCollection.Create(newViewPoint, hVal, GetBackward(newNodePos, endPos), parent: node);
+                        astarCollection.Add(newNode);
                     }
-                    sortedNodes.Add(
-                        new AStarKey()
-                        {
-                            Cost = newNode.Cost,
-                            Backward = newNode.Backward,
-                            NodePoint = newNode.NodePoint.Item2,
-                        },
-                        newNode);
                 }
 
                 if (IsCanceled)
@@ -223,22 +211,8 @@ namespace ObjectAreaLibrary
                     break;
                 }
 
-                var first = sortedNodes.FirstOrDefault(_ => !_.Value.Inspected);
-                if (!first.Equals(default(KeyValuePair)))
-                {
-                    node = first.Value;
-                }
-                else
-                {
-                    nodes = aStarCollection.Collection
-                        .AsParallel()
-                        .Where(_ => !_.Value.Inspected)
-                        .AsEnumerable()
-                        .Select(_ => _.Value)
-                        .OrderBy(_ => _.Cost)
-                        .ThenByDescending(_ => _.Backward);
-                    node = nodes.FirstOrDefault();
-                }
+                nodes = astarCollection.Sort();
+                node = nodes.FirstOrDefault();
             }
 
             return result;
@@ -276,8 +250,8 @@ namespace ObjectAreaLibrary
                 var newNode = aStarCollection.NodeAt(viewPos);
                 if (newNode == null)
                 {
-                    newNode = aStarCollection.CreatAStarNode(pos, heuristic(viewPos, goalPos) - inertia, GetBackward(viewPos, goalPos), parent: node);
-                    aStarCollection.AddNodes(newNode);
+                    newNode = AStarNodeCollection.Create(pos, heuristic(viewPos, goalPos) - inertia, GetBackward(viewPos, goalPos), parent: node);
+                    aStarCollection.Add(newNode);
                 }
                 newNode.NodePoint = pos;
                 newNode.Inspected = true;
@@ -305,21 +279,21 @@ namespace ObjectAreaLibrary
                 switch (vctType)
                 {
                     case VectorType.LeftToRight:
-                        aStarCollection.AddNodes(aStarCollection.CreatAStarNode(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
+                        aStarCollection.Add(AStarNodeCollection.Create(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
                         break;
                     case VectorType.TopToBottom:
-                        aStarCollection.AddNodes(aStarCollection.CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
+                        aStarCollection.Add(AStarNodeCollection.Create(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
                         break;
                     case VectorType.RightToLeft:
-                        aStarCollection.AddNodes(aStarCollection.CreatAStarNode(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
+                        aStarCollection.Add(AStarNodeCollection.Create(new VectorPos(vctType, new NodePoint(endPos.X, nodePos.Y)), 0, 0, adopt: true));
                         break;
                     case VectorType.BottomToTop:
-                        aStarCollection.AddNodes(aStarCollection.CreatAStarNode(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
+                        aStarCollection.Add(AStarNodeCollection.Create(new VectorPos(vctType, new NodePoint(nodePos.X, endPos.Y)), 0, 0, adopt: true));
                         break;
                 }
-                var goalNode = aStarCollection.CreatAStarNode(new VectorPos(vctType, endPos), 0, 0, adopt: true);
+                var goalNode = AStarNodeCollection.Create(new VectorPos(vctType, endPos), 0, 0, adopt: true);
                 goalNode.Goal = true;
-                aStarCollection.AddNodes(goalNode);
+                aStarCollection.Add(goalNode);
             }
             return result;
         }

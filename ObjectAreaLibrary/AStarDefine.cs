@@ -55,7 +55,10 @@ namespace ObjectAreaLibrary
         public bool Goal;
         public int Index;
         public AStarNode Parent;
+        public VectorType Vector { get => NodePoint.Item1; }
+        public NodePoint Point { get => NodePoint.Item2; }
 
+        #region ToString
         public enum ValueType
         {
             None,
@@ -65,7 +68,6 @@ namespace ObjectAreaLibrary
             Vector,
         }
 
-        #region ToString
         public string AdoptString()
         {
             return Adopt ? "*" : "-";
@@ -180,17 +182,18 @@ namespace ObjectAreaLibrary
         #endregion
     }
 
-    public class AStarNodeCollection
+    public class AStarNodeCollection : ICollection<AStarNode>
     {
         private int _astarNodeIndex;
 
-        public Dictionary<NodePoint, AStarNode> Collection { get; } = new Dictionary<NodePoint, AStarNode>();
+        private Dictionary<NodePoint, AStarNode> Collection { get; } = new Dictionary<NodePoint, AStarNode>();
 
-        public AStarNode CreatAStarNode(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false)
+        public int Count { get => Collection.Count; }
+
+        public static AStarNode Create(VectorPos vectorPos, double forward, double backward, AStarNode parent = null, bool adopt = false)
         {
             return new AStarNode()
             {
-                Index = ++_astarNodeIndex,
                 NodePoint = vectorPos,
                 Forward = forward,
                 Backward = backward,
@@ -200,23 +203,43 @@ namespace ObjectAreaLibrary
             };
         }
 
-        public void ClearNodes()
+        public void Clear()
         {
             _astarNodeIndex = 0;
             Collection.Clear();
         }
 
-        public void AddNodes(AStarNode node)
+        public void Add(AStarNode item)
         {
-            if (!Collection.ContainsKey(node.NodePoint.Item2))
+            if (!Collection.ContainsKey(item.NodePoint.Item2))
             {
-                Collection.Add(node.NodePoint.Item2, node);
+                item.Index = ++_astarNodeIndex;
+                Collection.Add(item.NodePoint.Item2, item);
             }
+        }
+
+        public bool Remove(AStarNode item)
+        {
+            return Collection.Remove(item.NodePoint.Item2);
+        }
+
+        public bool Contains(AStarNode item)
+        {
+            return Collection.ContainsKey(item.NodePoint.Item2);
         }
 
         public AStarNode NodeAt(NodePoint point)
         {
             return Collection.ContainsKey(point) ? Collection[point] : null;
+        }
+
+        public IEnumerable<AStarNode> Sort()
+        {
+            return Collection
+                .Where(_ => !_.Value.Inspected)
+                .Select(_ => _.Value)
+                .OrderBy(_ => _.Cost)
+                .ThenByDescending(_ => _.Backward);
         }
 
         public IEnumerable<NodePoint> AdoptList()
@@ -269,5 +292,13 @@ namespace ObjectAreaLibrary
             }
             throw new ArgumentException();
         }
+
+        public bool IsReadOnly => throw new NotImplementedException();
+
+        public void CopyTo(AStarNode[] array, int arrayIndex) => throw new NotImplementedException();
+
+        public IEnumerator<AStarNode> GetEnumerator() => throw new NotImplementedException();
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => throw new NotImplementedException();
     }
 }
